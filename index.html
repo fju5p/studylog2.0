@@ -1,0 +1,4984 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>StudyLog - 과목별 공부 시간 측정 및 학습 분석</title>
+    <meta name="description" content="과목별 공부 시간을 측정하고 일별·주별·월별·시간대별 심층 통계와 시험 D-Day, 목표 달성률을 한눈에 관리하는 고등학생용 공부 타이머 웹 앱">
+    <meta property="og:title" content="StudyLog - 과목별 공부 시간 측정 및 학습 분석">
+    <meta property="og:description" content="과목별 공부 시간을 측정하고 일별·주별·월별·시간대별 심층 통계와 시험 D-Day, 목표 달성률을 한눈에 관리하는 고등학생용 공부 타이머 웹 앱">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%234338ca'/%3E%3Ccircle cx='32' cy='34' r='16' fill='none' stroke='%23ffffff' stroke-width='4.5'/%3E%3Cpath d='M32 24v10l7 5' fill='none' stroke='%23ffffff' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M26 14h12' stroke='%23ffffff' stroke-width='4.5' stroke-linecap='round'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&amp;family=Noto+Sans+KR:wght@400;500;600;700&amp;display=swap">
+
+    <!-- 초기 화면 깜빡임(FOUC)을 방지하기 위한 테마 선적용 스크립트 -->
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem('studylog_v1');
+          var theme = null;
+          if (raw) {
+            var parsed = JSON.parse(raw);
+            if (parsed && (parsed.theme === 'dark' || parsed.theme === 'light')) {
+              theme = parsed.theme;
+            }
+          }
+          if (!theme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            theme = 'dark';
+          }
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+          }
+        } catch (e) {
+          // localStorage 접근이 차단된 환경에서도 기본 라이트 모드로 진행
+        }
+      })();
+    </script>
+
+    <style>
+      /* ==========================================================================
+         1. 디자인 토큰 및 라이트/다크 테마 변수
+         ========================================================================== */
+      :root {
+        --bg-canvas: #f5f6f8;
+        --bg-surface: #ffffff;
+        --bg-subtle: #eef0f4;
+        --bg-hover: #e5e8ef;
+        --border-hairline: rgba(15, 23, 42, 0.09);
+        --border-strong: rgba(15, 23, 42, 0.18);
+
+        --text-primary: #0f172a;
+        --text-secondary: #475569;
+        --text-muted: #64748b;
+
+        /* 10% 포인트 컬러: 대기(인디고) / 측정 중(코랄 레드) / 일시정지(앰버) */
+        --accent-idle: #4338ca;
+        --accent-idle-hover: #3730a3;
+        --accent-idle-soft: rgba(67, 56, 202, 0.1);
+        --accent-running: #dc2626;
+        --accent-running-hover: #b91c1c;
+        --accent-running-soft: rgba(220, 38, 38, 0.11);
+        --accent-paused: #b45309;
+        --accent-paused-soft: rgba(217, 119, 6, 0.12);
+
+        --success-text: #047857;
+        --success-bg: rgba(5, 150, 105, 0.1);
+
+        --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+        --shadow-modal: 0 20px 45px rgba(15, 23, 42, 0.22);
+
+        --radius-lg: 18px;
+        --radius-md: 12px;
+        --radius-sm: 8px;
+
+        --font-sans: 'Noto Sans KR', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        --font-mono: 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+      }
+
+      html.dark {
+        --bg-canvas: #0b0f17;
+        --bg-surface: #131a26;
+        --bg-subtle: #1b2434;
+        --bg-hover: #243045;
+        --border-hairline: rgba(241, 245, 249, 0.1);
+        --border-strong: rgba(241, 245, 249, 0.2);
+
+        --text-primary: #f1f5f9;
+        --text-secondary: #cbd5e1;
+        --text-muted: #94a3b8;
+
+        --accent-idle: #6366f1;
+        --accent-idle-hover: #4f46e5;
+        --accent-idle-soft: rgba(99, 102, 241, 0.18);
+        --accent-running: #ef4444;
+        --accent-running-hover: #dc2626;
+        --accent-running-soft: rgba(239, 68, 68, 0.18);
+        --accent-paused: #f59e0b;
+        --accent-paused-soft: rgba(245, 158, 11, 0.18);
+
+        --success-text: #34d399;
+        --success-bg: rgba(16, 185, 129, 0.16);
+
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+        --shadow-modal: 0 24px 50px rgba(0, 0, 0, 0.6);
+      }
+
+      /* ==========================================================================
+         2. 기본 리셋 및 타이포그래피
+         ========================================================================== */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family: var(--font-sans);
+        background-color: var(--bg-canvas);
+        color: var(--text-primary);
+        line-height: 1.5;
+        min-height: 100dvh;
+        transition: background-color 180ms ease, color 180ms ease;
+      }
+
+      button,
+      input,
+      select {
+        font-family: inherit;
+        color: inherit;
+      }
+
+      button {
+        cursor: pointer;
+        border: none;
+        background: none;
+        padding: 0;
+        touch-action: manipulation;
+      }
+
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible,
+      a:focus-visible {
+        outline: 2px solid var(--accent-idle);
+        outline-offset: 2px;
+      }
+
+      .tabular {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* ==========================================================================
+         3. 상단 내비게이션 바 & 모바일 하단 탭 바 (합산 높이 15% 미만)
+         ========================================================================== */
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        height: 50px;
+        background-color: var(--bg-surface);
+        border-bottom: 1px solid var(--border-hairline);
+        transition: background-color 180ms ease, border-color 180ms ease;
+      }
+
+      .topbar-inner {
+        max-width: 1160px;
+        height: 100%;
+        margin: 0 auto;
+        padding: 0 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+      }
+
+      .brand {
+        font-size: 1.125rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+        text-decoration: none;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .topbar-nav {
+        display: none;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .nav-link {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-decoration: none;
+        white-space: nowrap;
+        flex-shrink: 0;
+        padding: 12px 4px;
+        border-bottom: 2px solid transparent;
+        transition: color 150ms ease, border-color 150ms ease;
+      }
+
+      .nav-link:hover {
+        color: var(--text-primary);
+      }
+
+      .nav-link.is-active {
+        color: var(--accent-idle);
+        border-bottom-color: var(--accent-idle);
+      }
+
+      .theme-toggle {
+        min-height: 36px;
+        min-width: 44px;
+        padding: 0 12px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-hairline);
+        background-color: var(--bg-subtle);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: background-color 150ms ease, transform 120ms ease;
+      }
+
+      .theme-toggle:hover {
+        background-color: var(--bg-hover);
+      }
+
+      .theme-toggle:active {
+        transform: scale(0.97);
+      }
+
+      /* 모바일 전용 하단 5-탭 내비게이션 */
+      .mobile-bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 30;
+        height: 50px;
+        background-color: var(--bg-surface);
+        border-top: 1px solid var(--border-hairline);
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+
+      .mobile-tab-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        white-space: nowrap;
+        min-height: 44px;
+        border-top: 2px solid transparent;
+        transition: color 140ms ease, border-color 140ms ease;
+      }
+
+      .mobile-tab-link.is-active {
+        color: var(--accent-idle);
+        border-top-color: var(--accent-idle);
+      }
+
+      /* ==========================================================================
+         4. 페이지 컨테이너 & 미니 타이머 상태 바
+         ========================================================================== */
+      .app-shell {
+        max-width: 1160px;
+        margin: 0 auto;
+        padding: 16px 16px 78px;
+      }
+
+      @media (min-width: 960px) {
+        .topbar-inner {
+          padding: 0 24px;
+        }
+        .topbar-nav {
+          display: flex;
+        }
+        .mobile-bottom-nav {
+          display: none;
+        }
+        .app-shell {
+          padding: 24px 24px 56px;
+        }
+      }
+
+      /* 다른 페이지에 있을 때 측정 중임을 알려주는 컴팩트 배너 */
+      .mini-timer-bar {
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 16px;
+        margin-bottom: 16px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--accent-running);
+        background-color: var(--accent-running-soft);
+      }
+
+      .mini-timer-bar.is-paused {
+        border-color: var(--accent-paused);
+        background-color: var(--accent-paused-soft);
+      }
+
+      .mini-timer-bar.is-visible {
+        display: flex;
+      }
+
+      .mini-timer-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+
+      .mini-timer-clock {
+        font-family: var(--font-mono);
+        font-weight: 700;
+      }
+
+      .mini-timer-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      /* 페이지 뷰 전환 */
+      .page-view {
+        display: none;
+      }
+
+      .page-view.is-active {
+        display: block;
+      }
+
+      .page-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .page-title {
+        margin: 0;
+        font-size: 1.375rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .page-subtitle {
+        margin: 4px 0 0;
+        font-size: 0.875rem;
+        color: var(--text-muted);
+      }
+
+      /* 반응형 그리드 유틸리티 */
+      .grid-2col {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+        align-items: start;
+      }
+
+      .grid-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-width: 0;
+      }
+
+      .kpi-grid-4 {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      @media (min-width: 720px) {
+        .kpi-grid-4 {
+          grid-template-columns: repeat(4, 1fr);
+        }
+      }
+
+      @media (min-width: 960px) {
+        .grid-2col {
+          grid-template-columns: 420px 1fr;
+          gap: 24px;
+        }
+        .grid-2col-equal {
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+        }
+      }
+
+      /* ==========================================================================
+         5. 공통 카드 & 버튼 스타일
+         ========================================================================== */
+      .card {
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-hairline);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+        box-shadow: var(--shadow-sm);
+        transition: background-color 180ms ease, border-color 180ms ease;
+      }
+
+      .kpi-card {
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-hairline);
+        border-radius: var(--radius-md);
+        padding: 14px 16px;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .kpi-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin-bottom: 4px;
+      }
+
+      .kpi-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+      }
+
+      .kpi-sub {
+        margin-top: 2px;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .section-title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: var(--text-primary);
+      }
+
+      .section-meta {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+      }
+
+      .section-actions-inline {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .btn-text-action {
+        min-height: 36px;
+        padding: 6px 12px;
+        border-radius: var(--radius-sm);
+        background-color: var(--bg-subtle);
+        color: var(--text-primary);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+        transition: background-color 140ms ease;
+      }
+
+      .btn-text-action:hover {
+        background-color: var(--bg-hover);
+      }
+
+      .btn-secondary {
+        min-height: 44px;
+        padding: 8px 16px;
+        border-radius: var(--radius-sm);
+        background-color: var(--text-primary);
+        color: var(--bg-surface);
+        font-size: 0.875rem;
+        font-weight: 600;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: opacity 150ms ease, transform 120ms ease;
+      }
+
+      .btn-secondary:hover {
+        opacity: 0.88;
+      }
+
+      .btn-secondary:active {
+        transform: scale(0.97);
+      }
+
+      .btn-ghost {
+        min-height: 44px;
+        padding: 8px 14px;
+        border-radius: var(--radius-sm);
+        background-color: var(--bg-subtle);
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .btn-ghost:hover {
+        background-color: var(--bg-hover);
+      }
+
+      .btn-danger-solid {
+        min-height: 44px;
+        padding: 8px 16px;
+        border-radius: var(--radius-sm);
+        background-color: var(--accent-running);
+        color: #ffffff;
+        font-size: 0.875rem;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .btn-icon-muted {
+        min-width: 38px;
+        min-height: 38px;
+        padding: 0 8px;
+        border-radius: var(--radius-sm);
+        color: var(--text-secondary);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        transition: color 150ms ease, background-color 150ms ease;
+      }
+
+      .btn-icon-muted:hover {
+        color: var(--text-primary);
+        background-color: var(--bg-subtle);
+      }
+
+      .btn-icon-danger {
+        min-width: 38px;
+        min-height: 38px;
+        padding: 0 8px;
+        border-radius: var(--radius-sm);
+        color: var(--text-muted);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        transition: color 150ms ease, background-color 150ms ease;
+      }
+
+      .btn-icon-danger:hover {
+        color: var(--accent-running);
+        background-color: var(--accent-running-soft);
+      }
+
+      .text-input,
+      .select-input {
+        min-height: 44px;
+        padding: 8px 12px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-strong);
+        background-color: var(--bg-canvas);
+        font-size: 0.9375rem;
+        color: var(--text-primary);
+      }
+
+      .text-input::placeholder {
+        color: var(--text-muted);
+      }
+
+      .subject-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        display: inline-block;
+      }
+
+      /* ==========================================================================
+         6. PAGE 1: 타이머 & 홈 요약
+         ========================================================================== */
+      .timer-card.is-running {
+        border-color: var(--accent-running);
+      }
+
+      .timer-card.is-paused {
+        border-color: var(--accent-paused);
+      }
+
+      .timer-status-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+
+      .timer-state-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .timer-card.is-running .timer-state-label {
+        color: var(--accent-running);
+      }
+
+      .timer-card.is-paused .timer-state-label {
+        color: var(--accent-paused);
+      }
+
+      .timer-started-at {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+      }
+
+      .timer-clock {
+        font-family: var(--font-mono);
+        font-size: clamp(2.6rem, 8vw, 3.4rem);
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.1;
+        text-align: center;
+        margin: 12px 0 8px;
+        color: var(--text-primary);
+      }
+
+      .timer-card.is-running .timer-clock {
+        color: var(--accent-running);
+      }
+
+      .timer-card.is-paused .timer-clock {
+        color: var(--accent-paused);
+      }
+
+      .timer-mode-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        margin-bottom: 16px;
+      }
+
+      .mode-chip {
+        min-height: 32px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        background-color: var(--bg-subtle);
+      }
+
+      .mode-chip.is-active {
+        background-color: var(--accent-idle-soft);
+        color: var(--accent-idle);
+      }
+
+      .subject-selector-label {
+        display: block;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+      }
+
+      .subject-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .subject-btn {
+        min-height: 44px;
+        padding: 8px 14px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-hairline);
+        background-color: var(--bg-subtle);
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+        max-width: 100%;
+        transition: background-color 150ms ease, border-color 150ms ease, transform 120ms ease;
+      }
+
+      .subject-btn:hover:not(:disabled) {
+        background-color: var(--bg-hover);
+      }
+
+      .subject-btn.is-selected {
+        background-color: var(--bg-surface);
+        border-color: var(--subject-color, var(--accent-idle));
+        box-shadow: 0 0 0 2px var(--subject-color, var(--accent-idle));
+      }
+
+      .subject-btn:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .subject-btn-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .timer-controls-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .primary-timer-btn {
+        width: 100%;
+        min-height: 58px;
+        padding: 14px 20px;
+        border-radius: var(--radius-md);
+        font-size: 1.0625rem;
+        font-weight: 700;
+        color: #ffffff;
+        background-color: var(--accent-idle);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+        transition: background-color 150ms ease, transform 120ms ease;
+      }
+
+      .primary-timer-btn:hover:not(:disabled) {
+        background-color: var(--accent-idle-hover);
+      }
+
+      .primary-timer-btn.is-running {
+        background-color: var(--accent-running);
+      }
+
+      .primary-timer-btn.is-running:hover:not(:disabled) {
+        background-color: var(--accent-running-hover);
+      }
+
+      .primary-timer-btn:disabled {
+        background-color: var(--bg-hover);
+        color: var(--text-muted);
+        cursor: not-allowed;
+      }
+
+      .pause-resume-btn {
+        width: 100%;
+        min-height: 44px;
+        padding: 10px 16px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-strong);
+        background-color: var(--bg-subtle);
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+      }
+
+      .pause-resume-btn.is-visible {
+        display: flex;
+      }
+
+      .pause-resume-btn.is-paused {
+        background-color: var(--accent-paused-soft);
+        border-color: var(--accent-paused);
+        color: var(--accent-paused);
+      }
+
+      .timer-hint {
+        margin: 10px 0 0;
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+        text-align: center;
+      }
+
+      /* 이탈 시 자동 일시정지(딴짓 방지) 스위치 & 알림 */
+      .leave-guard-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px;
+        margin-bottom: 14px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-hairline);
+        background-color: var(--bg-subtle);
+      }
+
+      .leave-guard-text {
+        min-width: 0;
+      }
+
+      .leave-guard-title {
+        font-size: 0.8125rem;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .leave-guard-sub {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+
+      .toggle-switch {
+        position: relative;
+        width: 46px;
+        height: 26px;
+        border-radius: 999px;
+        background-color: var(--border-strong);
+        flex-shrink: 0;
+        transition: background-color 160ms ease;
+      }
+
+      .toggle-switch.is-on {
+        background-color: var(--accent-idle);
+      }
+
+      .toggle-switch-thumb {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #ffffff;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+        transition: transform 160ms ease;
+      }
+
+      .toggle-switch.is-on .toggle-switch-thumb {
+        transform: translateX(20px);
+      }
+
+      .leave-alert-box {
+        display: none;
+        margin-bottom: 12px;
+        padding: 10px 12px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--accent-paused);
+        background-color: var(--accent-paused-soft);
+        color: var(--text-primary);
+        font-size: 0.8125rem;
+        line-height: 1.45;
+      }
+
+      .leave-alert-box.is-visible {
+        display: block;
+      }
+
+      .leave-alert-box strong {
+        color: var(--accent-paused);
+      }
+
+      /* ==========================================================================
+         7. 차트, 비율 막대 & 심층 분석 스타일
+         ========================================================================== */
+      .segmented-tabs {
+        display: inline-flex;
+        padding: 3px;
+        border-radius: var(--radius-sm);
+        background-color: var(--bg-subtle);
+        gap: 2px;
+        flex-wrap: wrap;
+      }
+
+      .segmented-tab {
+        min-height: 36px;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        transition: background-color 150ms ease, color 150ms ease;
+      }
+
+      .segmented-tab.is-active {
+        background-color: var(--bg-surface);
+        color: var(--text-primary);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .ratio-bar-track {
+        width: 100%;
+        height: 10px;
+        border-radius: 999px;
+        overflow: hidden;
+        display: flex;
+        gap: 2px;
+        background-color: var(--bg-subtle);
+      }
+
+      .ratio-bar-seg {
+        height: 100%;
+        transition: width 220ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .ratio-legend {
+        margin-top: 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+      }
+
+      .bar-chart-grid {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-around;
+        gap: 8px;
+        height: 204px;
+        padding: 22px 6px 8px;
+        border-bottom: 1px solid var(--border-strong);
+      }
+
+      .bar-col {
+        flex: 1;
+        max-width: 64px;
+        min-width: 0;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 6px;
+      }
+
+      .bar-col-btn {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+        border-radius: var(--radius-sm);
+        padding: 2px;
+      }
+
+      .bar-col-btn:hover,
+      .bar-col-btn.is-active {
+        background-color: var(--bg-subtle);
+      }
+
+      .bar-value-label {
+        font-size: 0.6875rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        white-space: nowrap;
+      }
+
+      .bar-track {
+        width: 100%;
+        max-width: 34px;
+        height: 138px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        border-radius: 6px 6px 2px 2px;
+        overflow: hidden;
+        background-color: var(--bg-subtle);
+      }
+
+      .bar-fill {
+        width: 100%;
+        border-radius: 6px 6px 0 0;
+        transition: height 220ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .bar-stack-seg {
+        width: 100%;
+        transition: height 220ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .bar-chart-grid.is-dense {
+        gap: 3px;
+      }
+
+      .bar-labels-row {
+        display: flex;
+        justify-content: space-around;
+        gap: 8px;
+        padding: 8px 6px 0;
+      }
+
+      .bar-labels-row.is-dense {
+        gap: 3px;
+      }
+
+      .bar-labels-row.is-dense .bar-axis-label,
+      .bar-chart-grid.is-dense .bar-value-label {
+        font-size: 0.625rem;
+      }
+
+      .bar-axis-label {
+        flex: 1;
+        max-width: 64px;
+        min-width: 0;
+        text-align: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .bar-axis-label.is-today {
+        color: var(--accent-idle);
+        font-weight: 700;
+      }
+
+      .day-inspector {
+        margin-top: 12px;
+        padding: 10px 12px;
+        border-radius: var(--radius-sm);
+        background-color: var(--bg-subtle);
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 12px;
+      }
+
+      .totals-list {
+        list-style: none;
+        margin: 14px 0 0;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+        gap: 8px 16px;
+      }
+
+      .totals-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--border-hairline);
+        font-size: 0.875rem;
+      }
+
+      .totals-item-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .totals-item-name {
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .totals-item-time {
+        font-weight: 700;
+        color: var(--text-primary);
+        white-space: nowrap;
+      }
+
+      /* 시간대별 집중 분석 */
+      .timeband-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .timeband-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 0.8125rem;
+        margin-bottom: 5px;
+      }
+
+      .timeband-name {
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .timeband-stat {
+        color: var(--text-muted);
+      }
+
+      /* ==========================================================================
+         8. 기록 리스트, 필터 바 & 과목 관리
+         ========================================================================== */
+      .filter-bar {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .date-group-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 0 6px;
+        margin-top: 8px;
+        border-bottom: 1px solid var(--border-strong);
+        font-size: 0.8125rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+      }
+
+      .date-group-header:first-child {
+        margin-top: 0;
+      }
+
+      .records-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .record-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border-hairline);
+      }
+
+      .record-item:last-child {
+        border-bottom: none;
+      }
+
+      .record-main {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        min-width: 0;
+        flex: 1;
+      }
+
+      .record-main .subject-dot {
+        margin-top: 6px;
+      }
+
+      .record-info {
+        min-width: 0;
+      }
+
+      .record-subject {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .record-meta {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+      }
+
+      .record-memo {
+        margin-top: 2px;
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+        word-break: break-word;
+      }
+
+      .record-actions {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+
+      .record-duration {
+        font-size: 0.9375rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        white-space: nowrap;
+        margin-right: 4px;
+      }
+
+      /* ==========================================================================
+         9. 목표 달성률, D-Day 목록 & 집중도 통계
+         ========================================================================== */
+      .advice-banner {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 18px 20px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border-hairline);
+        background-color: var(--bg-surface);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .advice-kicker {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--accent-idle);
+      }
+
+      .advice-banner.is-complete .advice-kicker {
+        color: var(--success-text);
+      }
+
+      .advice-banner.is-imbalanced .advice-kicker {
+        color: var(--accent-paused);
+      }
+
+      .advice-text {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .advice-sub {
+        margin: 0;
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+      }
+
+      .advice-balance-note {
+        margin: 0;
+        padding-top: 8px;
+        border-top: 1px solid var(--border-hairline);
+        font-size: 0.8125rem;
+        color: var(--accent-paused);
+        font-weight: 600;
+      }
+
+      .dday-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .dday-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 11px 0;
+        border-bottom: 1px solid var(--border-hairline);
+      }
+
+      .dday-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+
+      .dday-badge-text {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--accent-idle);
+        min-width: 58px;
+      }
+
+      .goal-progress-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .goal-row-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 6px;
+        font-size: 0.875rem;
+      }
+
+      .goal-row-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+      }
+
+      .goal-row-values {
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+        white-space: nowrap;
+      }
+
+      .progress-track {
+        width: 100%;
+        height: 10px;
+        border-radius: 999px;
+        background-color: var(--bg-subtle);
+        overflow: hidden;
+      }
+
+      .progress-bar {
+        height: 100%;
+        border-radius: 999px;
+        transition: width 240ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .focus-sub-heading {
+        margin: 16px 0 8px;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+      }
+
+      .focus-dist-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .focus-dist-row {
+        display: grid;
+        grid-template-columns: 74px 1fr 112px;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.8125rem;
+      }
+
+      .focus-dist-label {
+        font-weight: 600;
+        color: var(--text-secondary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .focus-dist-track {
+        height: 8px;
+        border-radius: 999px;
+        background-color: var(--bg-subtle);
+        overflow: hidden;
+      }
+
+      .focus-dist-fill {
+        height: 100%;
+        border-radius: 999px;
+        background-color: var(--accent-idle);
+      }
+
+      .focus-dist-stat {
+        text-align: right;
+        color: var(--text-muted);
+        white-space: nowrap;
+      }
+
+      /* ==========================================================================
+         10. 과목 관리, 배경 음악 추천 & 설정
+         ========================================================================== */
+      .add-subject-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .add-subject-form .text-input {
+        flex: 1 1 160px;
+      }
+
+      .color-palette {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 2px 0;
+      }
+
+      .color-palette-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-right: 4px;
+        white-space: nowrap;
+      }
+
+      .color-swatch {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 2px solid transparent;
+        transition: transform 120ms ease, border-color 120ms ease;
+      }
+
+      .color-swatch.is-active {
+        border-color: var(--text-primary);
+        transform: scale(1.12);
+      }
+
+      .subject-manage-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .subject-manage-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border-hairline);
+      }
+
+      .subject-manage-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+
+      .subject-manage-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        flex: 1;
+      }
+
+      .subject-manage-name {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .subject-manage-right {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+
+      .goal-input-wrap {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+
+      .goal-input {
+        width: 52px;
+        min-height: 36px;
+        padding: 4px 6px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-strong);
+        background-color: var(--bg-canvas);
+        text-align: right;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+
+      /* 배경 음악 추천 */
+      .music-score-tabs {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
+        margin-bottom: 14px;
+      }
+
+      .music-score-tab {
+        min-height: 40px;
+        padding: 6px 4px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-hairline);
+        background-color: var(--bg-subtle);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        white-space: nowrap;
+      }
+
+      .music-score-tab.is-active {
+        background-color: var(--accent-idle-soft);
+        border-color: var(--accent-idle);
+        color: var(--accent-idle);
+      }
+
+      .music-genre-box {
+        padding: 14px;
+        border-radius: var(--radius-md);
+        background-color: var(--bg-subtle);
+        margin-bottom: 12px;
+      }
+
+      .music-genre-kicker {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--accent-idle);
+        margin-bottom: 4px;
+      }
+
+      .music-genre-title {
+        margin: 0 0 4px;
+        font-size: 1rem;
+        font-weight: 700;
+      }
+
+      .music-genre-reason {
+        margin: 0;
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+      }
+
+      .music-audio-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-hairline);
+        margin-bottom: 12px;
+      }
+
+      .music-audio-meta {
+        font-size: 0.8125rem;
+        font-weight: 600;
+      }
+
+      .music-audio-sub {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+
+      .music-audio-btn {
+        min-height: 38px;
+        padding: 6px 14px;
+        border-radius: var(--radius-sm);
+        background-color: var(--accent-idle);
+        color: #ffffff;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .music-audio-btn.is-playing {
+        background-color: var(--accent-running);
+      }
+
+      .music-playlist-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .music-playlist-item {
+        border-bottom: 1px solid var(--border-hairline);
+      }
+
+      .music-playlist-item:last-child {
+        border-bottom: none;
+      }
+
+      .music-playlist-link {
+        min-height: 46px;
+        padding: 10px 4px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        text-decoration: none;
+        color: var(--text-primary);
+      }
+
+      .music-playlist-link:hover {
+        background-color: var(--bg-subtle);
+      }
+
+      .music-playlist-info {
+        min-width: 0;
+      }
+
+      .music-playlist-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .music-playlist-platform {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+
+      .music-playlist-arrow {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--accent-idle);
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .setting-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 14px 0;
+        border-bottom: 1px solid var(--border-hairline);
+      }
+
+      .setting-row:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+
+      .setting-title {
+        font-size: 0.9375rem;
+        font-weight: 600;
+      }
+
+      .setting-desc {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+      }
+
+      .volume-range {
+        width: 120px;
+        accent-color: var(--accent-idle);
+      }
+
+      /* ==========================================================================
+         11. 빈 상태, 토스트 & 모달
+         ========================================================================== */
+      .empty-state {
+        padding: 24px 12px;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 0.875rem;
+        line-height: 1.6;
+      }
+
+      .empty-state strong {
+        display: block;
+        color: var(--text-primary);
+        font-size: 0.9375rem;
+        margin-bottom: 4px;
+      }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 66px;
+        transform: translateX(-50%) translateY(16px);
+        background-color: var(--text-primary);
+        color: var(--bg-surface);
+        padding: 10px 18px;
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        font-weight: 600;
+        box-shadow: var(--shadow-modal);
+        opacity: 0;
+        pointer-events: none;
+        z-index: 60;
+        white-space: nowrap;
+        max-width: calc(100vw - 32px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: opacity 180ms ease, transform 180ms ease;
+      }
+
+      @media (min-width: 960px) {
+        .toast {
+          bottom: 24px;
+        }
+      }
+
+      .toast.is-visible {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background-color: rgba(15, 23, 42, 0.56);
+        display: none;
+        align-items: flex-end;
+        justify-content: center;
+        z-index: 50;
+        padding: 0;
+      }
+
+      .modal-backdrop.is-open {
+        display: flex;
+      }
+
+      .modal-sheet {
+        width: 100%;
+        max-width: 460px;
+        max-height: 90dvh;
+        overflow-y: auto;
+        background-color: var(--bg-surface);
+        border: 1px solid var(--border-hairline);
+        border-radius: 22px 22px 0 0;
+        padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+        box-shadow: var(--shadow-modal);
+      }
+
+      @media (min-width: 640px) {
+        .modal-backdrop {
+          align-items: center;
+          padding: 16px;
+        }
+        .modal-sheet {
+          border-radius: var(--radius-lg);
+          padding: 24px;
+        }
+      }
+
+      .modal-title {
+        margin: 0 0 6px;
+        font-size: 1.125rem;
+        font-weight: 700;
+      }
+
+      .modal-desc {
+        margin: 0 0 14px;
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+      }
+
+      .form-field {
+        margin-bottom: 12px;
+      }
+
+      .form-label {
+        display: block;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 6px;
+      }
+
+      .form-field .text-input,
+      .form-field .select-input {
+        width: 100%;
+      }
+
+      .focus-score-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .focus-score-btn {
+        min-height: 56px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-strong);
+        background-color: var(--bg-subtle);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+      }
+
+      .focus-score-btn:hover,
+      .focus-score-btn.is-selected {
+        background-color: var(--accent-idle-soft);
+        border-color: var(--accent-idle);
+      }
+
+      .focus-score-num {
+        font-size: 1.125rem;
+        font-weight: 700;
+      }
+
+      .focus-score-text {
+        font-size: 0.6875rem;
+        color: var(--text-muted);
+      }
+
+      .modal-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  <style>.aistudio-hover-highlight { box-shadow: inset 0 0 0 0.5px white, inset 0 0 0 1.5px rgba(128,128,128,0.6) !important; }.aistudio-active-highlight { outline: 2px solid #87a9ff !important; outline-offset: -2px !important; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.3), inset 0 0 0 0.5px rgba(0,0,0,0.3) !important; }.aistudio-generating-blur { filter: blur(5px) grayscale(100%) brightness(28%) !important; transition: filter 0.3s ease; }#aistudio-focus-mode-tag { position: absolute; display: none; align-items: center; gap: 4px; background: #87a9ff; border-radius: 12px; z-index: 10000; padding: 8px; color: #32302c; font-family: Inter, sans-serif; font-size: 14px; font-style: normal; font-weight: 500; line-height: 21px; pointer-events: none; }#aistudio-hover-mode-tag { position: absolute; display: none; align-items: center; gap: 4px; background: rgba(128,128,128,0.6); border-radius: 12px; z-index: 10000; padding: 8px; color: white; font-family: Inter, sans-serif; font-size: 14px; font-style: normal; font-weight: 500; line-height: 21px; pointer-events: none; }.aistudio-img-icon { display: none; vertical-align: middle; pointer-events: auto; cursor: pointer; }.aistudio-img-icon.visible { display: inline-flex; }#aistudio-focus-mode-tag .aistudio-img-icon { position: relative; width: 26px; height: 26px; background: #32302c; border-radius: 6px; margin: -4px -4px -4px 0; }#aistudio-focus-mode-tag .aistudio-img-icon::before { content: ""; position: absolute; top: 4px; left: 4px; width: 18px; height: 18px; background-color: white; -webkit-mask-image: url("https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/edit_fix_auto/default/24px.svg"); -webkit-mask-size: contain; -webkit-mask-repeat: no-repeat; mask-image: url("https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/edit_fix_auto/default/24px.svg"); mask-size: contain; mask-repeat: no-repeat; }#aistudio-hover-mode-tag .aistudio-img-icon { position: relative; width: 18px; height: 18px; margin-left: 4px; }#aistudio-hover-mode-tag .aistudio-img-icon::before { content: ""; position: absolute; top: 0; left: 0; width: 18px; height: 18px; background-color: white; -webkit-mask-image: url("https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/edit_fix_auto/default/24px.svg"); -webkit-mask-size: contain; -webkit-mask-repeat: no-repeat; mask-image: url("https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/edit_fix_auto/default/24px.svg"); mask-size: contain; mask-repeat: no-repeat; }#aistudio-focus-mode-tag .aistudio-img-icon:hover, #aistudio-hover-mode-tag .aistudio-img-icon:hover { background: #424242 !important; }#aistudio-focus-mode-tag .aistudio-img-icon:active, #aistudio-hover-mode-tag .aistudio-img-icon:active { background: #393f51 !important; }</style></head>
+
+  <body>
+    <!-- 상단 앱 바 (3-Zone: 브랜드 · 5개 페이지 링크 · 테마 전환) -->
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a href="#/timer" class="brand">StudyLog</a>
+        <nav class="topbar-nav" aria-label="페이지 이동">
+          <a href="#/timer" class="nav-link" data-page-link="timer">타이머</a>
+          <a href="#/analytics" class="nav-link" data-page-link="analytics">심층 분석</a>
+          <a href="#/records" class="nav-link" data-page-link="records">전체 기록</a>
+          <a href="#/goals" class="nav-link" data-page-link="goals">목표 · D-Day</a>
+          <a href="#/manage" class="nav-link" data-page-link="manage">과목 · 설정</a>
+        </nav>
+        <div class="section-actions-inline" style="flex-shrink: 0;">
+          <button id="topbarDownloadHtmlBtn" class="theme-toggle" type="button" aria-label="단일 index.html 파일 다운로드">
+            <span>index.html 저장</span>
+          </button>
+          <button id="themeToggleBtn" class="theme-toggle" type="button" aria-label="다크 모드 전환">
+            <span id="themeToggleLabel">다크 모드</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 앱 본문 컨테이너 -->
+    <main class="app-shell">
+      <!-- 다른 페이지 탐색 중에도 측정 상태를 확인·제어하는 미니 타이머 바 -->
+      <div id="miniTimerBar" class="mini-timer-bar" role="region" aria-label="진행 중인 공부 타이머">
+        <div class="mini-timer-info">
+          <span id="miniTimerDot" class="subject-dot" aria-hidden="true"></span>
+          <span id="miniTimerSubject">공부 측정 중</span>
+          <span aria-hidden="true">·</span>
+          <span id="miniTimerClock" class="mini-timer-clock tabular">00:00:00</span>
+        </div>
+        <div class="mini-timer-actions">
+          <button id="miniTimerResumeBtn" type="button" class="btn-text-action" style="display: none;">이어서</button>
+          <a href="#/timer" class="btn-text-action">타이머 보기</a>
+          <button id="miniTimerStopBtn" type="button" class="btn-text-action">정지 · 저장</button>
+        </div>
+      </div>
+
+      <!-- ==================================================================
+           PAGE 1: 타이머 홈 (#/timer)
+           ================================================================== -->
+      <section id="page-timer" class="page-view" aria-labelledby="pageTimerTitle">
+        <div class="page-head">
+          <div>
+            <h1 id="pageTimerTitle" class="page-title">오늘 공부 측정</h1>
+            <p class="page-subtitle">과목을 고르고 시작을 누르면 3번 이내 터치로 바로 기록됩니다.</p>
+          </div>
+          <span id="homeDdayTag" class="section-meta tabular"></span>
+        </div>
+
+        <div class="grid-2col">
+          <!-- 좌측: 핵심 타이머 카드 -->
+          <div class="card timer-card" id="timer-section">
+            <div class="timer-status-row">
+              <div class="timer-state-label">
+                <span id="timerSubjectDot" class="subject-dot" aria-hidden="true"></span>
+                <span id="timerSubjectText">과목을 선택하세요</span>
+              </div>
+              <span id="timerStartedAtText" class="timer-started-at tabular"></span>
+            </div>
+
+            <div id="timerClock" class="timer-clock tabular" aria-live="off">00:00:00</div>
+            <div id="timerLiveAnnounce" class="sr-only" aria-live="polite"></div>
+
+            <div class="timer-mode-row" role="group" aria-label="집중 타이머 가이드">
+              <button type="button" class="mode-chip is-active" data-guide-min="0">자유 측정</button>
+              <button type="button" class="mode-chip" data-guide-min="25">25분 집중</button>
+              <button type="button" class="mode-chip" data-guide-min="50">50분 집중</button>
+            </div>
+
+            <div class="leave-guard-row">
+              <div class="leave-guard-text">
+                <div class="leave-guard-title">이탈 시 자동 정지</div>
+                <div id="leaveGuardDesc" class="leave-guard-sub">다른 앱·탭 이동 또는 이탈 시 시간 멈춤</div>
+              </div>
+              <button id="leaveGuardToggleBtn" type="button" class="toggle-switch is-on" role="switch" aria-checked="true" aria-label="이탈 시 자동 정지 전환">
+                <span class="toggle-switch-thumb" aria-hidden="true"></span>
+              </button>
+            </div>
+
+            <div id="leaveAlertBox" class="leave-alert-box" role="status" aria-live="polite"></div>
+
+            <span class="subject-selector-label">공부할 과목</span>
+            <div id="subjectSelectGrid" class="subject-grid" role="group" aria-label="과목 선택"></div>
+
+            <div class="timer-controls-stack">
+              <button id="primaryTimerBtn" class="primary-timer-btn" type="button">공부 시작</button>
+              <button id="pauseResumeBtn" class="pause-resume-btn" type="button">잠깐 일시정지</button>
+            </div>
+            <p id="timerHint" class="timer-hint">과목을 고르고 시작을 누르면 시간이 바로 기록돼요.</p>
+          </div>
+
+          <!-- 우측: 오늘 요약 + 최근 기록 + 맞춤 배경 음악 -->
+          <div class="grid-stack">
+            <div class="kpi-grid-4" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 0;">
+              <div class="kpi-card">
+                <div class="kpi-label">오늘 공부</div>
+                <div id="homeTodayTotal" class="kpi-value tabular">0분</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-label">이번 주 누적</div>
+                <div id="homeWeekTotal" class="kpi-value tabular">0분</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-label">최근 집중도</div>
+                <div id="homeLatestFocus" class="kpi-value tabular">-</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="section-header">
+                <h2 class="section-title">오늘의 시간 배분 및 최근 기록</h2>
+                <div class="section-actions-inline">
+                  <button id="homeQuickAddBtn" type="button" class="btn-text-action">+ 직접 추가</button>
+                  <a href="#/records" class="btn-text-action">전체 보기</a>
+                </div>
+              </div>
+              <div id="homeTodayRatioWrap" style="margin-bottom: 12px;"></div>
+              <ul id="homeRecentRecordsList" class="records-list"></ul>
+            </div>
+
+            <div class="card">
+              <div class="section-header">
+                <h2 class="section-title">지금 추천하는 공부 배경 음악</h2>
+                <a href="#/manage" id="homeMusicMeta" class="btn-text-action">전체 보기</a>
+              </div>
+              <div id="homeMusicBody"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           PAGE 2: 심층 분석 (#/analytics)
+           ================================================================== -->
+      <section id="page-analytics" class="page-view" aria-labelledby="pageAnalyticsTitle">
+        <div class="page-head">
+          <div>
+            <h1 id="pageAnalyticsTitle" class="page-title">학습 데이터 심층 분석</h1>
+            <p class="page-subtitle">일별·주별·월별 추이와 시간대별 집중 패턴, 과목별 편중도를 한눈에 분석합니다.</p>
+          </div>
+          <div id="analyticsPeriodTabs" class="segmented-tabs" role="tablist" aria-label="분석 기간 선택">
+            <button type="button" class="segmented-tab is-active" role="tab" data-period="today">오늘</button>
+            <button type="button" class="segmented-tab" role="tab" data-period="week">이번 주</button>
+            <button type="button" class="segmented-tab" role="tab" data-period="month">최근 30일</button>
+            <button type="button" class="segmented-tab" role="tab" data-period="all">전체 누적</button>
+          </div>
+        </div>
+
+        <div class="kpi-grid-4">
+          <div class="kpi-card">
+            <div class="kpi-label">선택 기간 총 공부</div>
+            <div id="anTotalTime" class="kpi-value tabular">0분</div>
+            <div id="anSessionCount" class="kpi-sub tabular">0회 측정</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">활동일 평균</div>
+            <div id="anDailyAvg" class="kpi-value tabular">0분</div>
+            <div id="anActiveDays" class="kpi-sub tabular">공부한 날 0일</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">최다 공부 과목</div>
+            <div id="anTopSubject" class="kpi-value">-</div>
+            <div id="anTopShare" class="kpi-sub tabular">비중 0%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">평균 집중도</div>
+            <div id="anAvgFocus" class="kpi-value tabular">-</div>
+            <div id="anBestBand" class="kpi-sub">최고 집중 시간대 -</div>
+          </div>
+        </div>
+
+        <div class="grid-2col grid-2col-equal" style="margin-bottom: 16px;">
+          <!-- 과목별/일별 막대그래프 -->
+          <div class="card">
+            <div class="section-header">
+              <h2 id="anChartTitle" class="section-title">과목별 공부 시간 막대그래프</h2>
+              <span id="anChartCaption" class="section-meta">오늘 기준</span>
+            </div>
+            <div id="anRatioBarWrap" style="margin-bottom: 14px;"></div>
+            <div id="anChartContainer"></div>
+            <ul id="anSubjectTotals" class="totals-list"></ul>
+          </div>
+
+          <!-- 시간대별 집중 패턴 분석 -->
+          <div class="card">
+            <div class="section-header">
+              <h2 class="section-title">시간대별 학습 효율 분석</h2>
+              <span class="section-meta">언제 가장 집중이 잘 될까?</span>
+            </div>
+            <div id="anTimebandBody"></div>
+          </div>
+        </div>
+
+        <!-- 집중도 상세 분포 & 과목별 집중도 -->
+        <div class="card">
+          <div class="section-header">
+            <h2 class="section-title">집중도 상세 통계</h2>
+            <span id="anFocusMeta" class="section-meta">선택 기간 기준</span>
+          </div>
+          <div id="anFocusBody"></div>
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           PAGE 3: 전체 기록 (#/records)
+           ================================================================== -->
+      <section id="page-records" class="page-view" aria-labelledby="pageRecordsTitle">
+        <div class="page-head">
+          <div>
+            <h1 id="pageRecordsTitle" class="page-title">전체 공부 기록</h1>
+            <p class="page-subtitle">모든 날짜의 공부 기록을 과목·기간·집중도별로 찾고 수정하거나 CSV로 내보낼 수 있어요.</p>
+          </div>
+          <div class="section-actions-inline">
+            <button id="recManualAddBtn" type="button" class="btn-secondary">+ 기록 직접 추가</button>
+            <button id="exportCsvBtn" type="button" class="btn-text-action">CSV 내보내기</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="filter-bar">
+            <select id="recSubjectFilter" class="select-input" aria-label="과목 필터"></select>
+            <select id="recPeriodFilter" class="select-input" aria-label="기간 필터">
+              <option value="today">오늘만 보기</option>
+              <option value="week">이번 주</option>
+              <option value="month">최근 30일</option>
+              <option value="all" selected="">전체 기간</option>
+            </select>
+            <select id="recFocusFilter" class="select-input" aria-label="집중도 필터">
+              <option value="all">모든 집중도</option>
+              <option value="high">고집중 (4~5점)</option>
+              <option value="mid">보통 (3점)</option>
+              <option value="low">저집중 (1~2점)</option>
+              <option value="none">미평가</option>
+            </select>
+            <input id="recSearchInput" class="text-input" type="search" placeholder="과목명 또는 메모 검색" aria-label="기록 검색">
+          </div>
+
+          <div class="section-header" style="margin-bottom: 8px;">
+            <span id="recFilterSummary" class="section-meta tabular">0건 · 총 0분</span>
+            <button id="recResetFilterBtn" type="button" class="btn-text-action">필터 초기화</button>
+          </div>
+
+          <div id="recGroupedContainer"></div>
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           PAGE 4: 목표 · D-Day (#/goals)
+           ================================================================== -->
+      <section id="page-goals" class="page-view" aria-labelledby="pageGoalsTitle">
+        <div class="page-head">
+          <div>
+            <h1 id="pageGoalsTitle" class="page-title">주간 목표 · 시험 D-Day</h1>
+            <p class="page-subtitle">시험과 수행평가 일정을 등록하고 주간 목표 달성률과 부족한 과목을 관리합니다.</p>
+          </div>
+          <button id="openExamModalBtn" type="button" class="btn-secondary">+ 시험·수행평가 추가</button>
+        </div>
+
+        <div class="grid-stack">
+          <section id="adviceBanner" class="advice-banner" aria-live="polite">
+            <span id="adviceKicker" class="advice-kicker">시간 배분 제안</span>
+            <p id="adviceText" class="advice-text">목표를 설정하면 부족한 과목을 알려드려요.</p>
+            <p id="adviceSub" class="advice-sub"></p>
+            <p id="adviceBalanceNote" class="advice-balance-note" style="display: none;"></p>
+          </section>
+
+          <div class="grid-2col grid-2col-equal">
+            <div class="card">
+              <div class="section-header">
+                <h2 class="section-title">이번 주 과목별 목표 달성률</h2>
+                <span class="section-meta">월~일 기준</span>
+              </div>
+              <ul id="goalProgressList" class="goal-progress-list"></ul>
+            </div>
+
+            <div class="card">
+              <div class="section-header">
+                <h2 class="section-title">시험 · 수행평가 일정</h2>
+                <span id="ddayCountMeta" class="section-meta tabular">0개 일정</span>
+              </div>
+              <ul id="ddayList" class="dday-list"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           PAGE 5: 과목 · 설정 (#/manage)
+           ================================================================== -->
+      <section id="page-manage" class="page-view" aria-labelledby="pageManageTitle">
+        <div class="page-head">
+          <div>
+            <h1 id="pageManageTitle" class="page-title">과목 관리 · 배경 음악 · 데이터 설정</h1>
+            <p class="page-subtitle">과목과 주간 목표를 설정하고, 집중도별 배경 음악과 백업 데이터를 관리합니다.</p>
+          </div>
+        </div>
+
+        <div class="grid-2col grid-2col-equal">
+          <div class="grid-stack">
+            <div class="card">
+              <div class="section-header">
+                <h2 class="section-title">과목 추가 및 주간 목표 설정</h2>
+                <span id="subjectCountMeta" class="section-meta tabular">0개 과목</span>
+              </div>
+
+              <form id="addSubjectForm" class="add-subject-form">
+                <label for="newSubjectName" class="sr-only">새 과목 이름</label>
+                <input id="newSubjectName" class="text-input" type="text" maxlength="16" placeholder="새 과목 입력 (예: 과학탐구)" autocomplete="off">
+                <button type="submit" class="btn-secondary">과목 추가</button>
+                <div id="colorPalette" class="color-palette" role="radiogroup" aria-label="과목 색상 선택">
+                  <span class="color-palette-label">색상</span>
+                </div>
+              </form>
+
+              <ul id="subjectManageList" class="subject-manage-list"></ul>
+            </div>
+
+            <div class="card">
+              <div class="section-header">
+                <h2 class="section-title">화면 및 데이터 백업</h2>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-title">이탈 시 자동 일시정지 (딴짓 방지)</div>
+                  <div class="setting-desc">다른 앱·탭으로 이동하거나 사이트를 나가면 시간을 자동으로 멈춥니다. (꺼두면 화면을 꺼도 계속 측정)</div>
+                </div>
+                <button id="manageLeaveGuardBtn" type="button" class="btn-text-action">켜짐</button>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-title">화면 테마 (라이트 / 다크)</div>
+                  <div class="setting-desc">눈의 피로를 줄이기 위해 언제든 전환할 수 있습니다.</div>
+                </div>
+                <button id="manageThemeBtn" type="button" class="btn-text-action">테마 전환</button>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-title">내장 집중 사운드 음량</div>
+                  <div class="setting-desc">화이트·브라운 노이즈 재생 시 출력 볼륨을 조절합니다.</div>
+                </div>
+                <input id="noiseVolumeRange" class="volume-range" type="range" min="2" max="40" value="14" aria-label="집중 사운드 음량">
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-title">단일 index.html 파일 다운로드</div>
+                  <div class="setting-desc">더블 클릭 실행이나 GitHub · Vercel 업로드용 순수 단일 HTML 파일을 내려받습니다.</div>
+                </div>
+                <button id="downloadHtmlBtn" type="button" class="btn-text-action">index.html 다운로드</button>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-title">학습 데이터 백업 및 복원</div>
+                  <div class="setting-desc">JSON 파일로 내보내거나 다른 브라우저에서 불러옵니다.</div>
+                </div>
+                <div class="section-actions-inline">
+                  <button id="exportJsonBtn" type="button" class="btn-text-action">JSON 내보내기</button>
+                  <button id="importJsonBtn" type="button" class="btn-text-action">복원하기</button>
+                  <input id="importJsonInput" type="file" accept="application/json,.json" class="sr-only">
+                </div>
+              </div>
+
+              <div class="setting-row">
+                <div>
+                  <div class="setting-title">전체 기록 초기화</div>
+                  <div class="setting-desc">모든 공부 기록을 삭제하고 기본 과목만 남깁니다.</div>
+                </div>
+                <button id="resetAllRecordsBtn" type="button" class="btn-icon-danger">기록 초기화</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="section-header">
+              <h2 class="section-title">집중도별 공부 배경 음악 라이브러리</h2>
+              <span id="musicScopeMeta" class="section-meta">1~5점 선택</span>
+            </div>
+            <div id="musicScoreTabs" class="music-score-tabs" role="tablist" aria-label="집중도 점수별 배경 음악 보기">
+              <button type="button" class="music-score-tab" role="tab" data-music-score="1">1점</button>
+              <button type="button" class="music-score-tab" role="tab" data-music-score="2">2점</button>
+              <button type="button" class="music-score-tab" role="tab" data-music-score="3">3점</button>
+              <button type="button" class="music-score-tab" role="tab" data-music-score="4">4점</button>
+              <button type="button" class="music-score-tab" role="tab" data-music-score="5">5점</button>
+            </div>
+            <div id="musicDashboardBody"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 모바일 하단 5-탭 내비게이션 -->
+    <nav class="mobile-bottom-nav" aria-label="모바일 페이지 이동">
+      <a href="#/timer" class="mobile-tab-link" data-page-link="timer">타이머</a>
+      <a href="#/analytics" class="mobile-tab-link" data-page-link="analytics">분석</a>
+      <a href="#/records" class="mobile-tab-link" data-page-link="records">기록</a>
+      <a href="#/goals" class="mobile-tab-link" data-page-link="goals">목표</a>
+      <a href="#/manage" class="mobile-tab-link" data-page-link="manage">설정</a>
+    </nav>
+
+    <!-- 공부 정지 시 집중도 입력 & 맞춤 음악 제안 모달 -->
+    <div id="stopModalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="stopModalTitle">
+      <div class="modal-sheet">
+        <div id="stopStepEvaluate">
+          <h3 id="stopModalTitle" class="modal-title">공부 완료! 집중도는 어땠나요?</h3>
+          <p id="stopModalDesc" class="modal-desc tabular"></p>
+          <div class="form-field">
+            <label for="stopMemoInput" class="form-label">한 줄 메모 (선택)</label>
+            <input id="stopMemoInput" class="text-input" type="text" maxlength="40" placeholder="예: 기출 1회 풀기, 영단어 50개" autocomplete="off">
+          </div>
+          <div id="focusScoreGrid" class="focus-score-grid">
+            <button type="button" class="focus-score-btn" data-score="1">
+              <span class="focus-score-num">1</span>
+              <span class="focus-score-text">흐트러짐</span>
+            </button>
+            <button type="button" class="focus-score-btn" data-score="2">
+              <span class="focus-score-num">2</span>
+              <span class="focus-score-text">아쉬움</span>
+            </button>
+            <button type="button" class="focus-score-btn" data-score="3">
+              <span class="focus-score-num">3</span>
+              <span class="focus-score-text">보통</span>
+            </button>
+            <button type="button" class="focus-score-btn" data-score="4">
+              <span class="focus-score-num">4</span>
+              <span class="focus-score-text">좋음</span>
+            </button>
+            <button type="button" class="focus-score-btn" data-score="5">
+              <span class="focus-score-num">5</span>
+              <span class="focus-score-text">최고</span>
+            </button>
+          </div>
+          <div class="modal-actions">
+            <button id="discardSessionBtn" type="button" class="btn-ghost">저장 안 함</button>
+            <button id="resumeSessionBtn" type="button" class="btn-ghost">계속 공부</button>
+            <button id="saveWithoutFocusBtn" type="button" class="btn-secondary">평가 없이 저장</button>
+          </div>
+        </div>
+
+        <div id="stopStepMusic" style="display: none;">
+          <h3 id="stopMusicTitle" class="modal-title">기록 저장 완료!</h3>
+          <p id="stopMusicDesc" class="modal-desc tabular"></p>
+          <div id="stopMusicBody"></div>
+          <div class="modal-actions" style="margin-top: 14px;">
+            <button id="stopMusicCloseBtn" type="button" class="btn-secondary">확인 · 닫기</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 공부 기록 직접 추가 / 수정 모달 -->
+    <div id="manualModalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="manualModalTitle">
+      <div class="modal-sheet">
+        <h3 id="manualModalTitle" class="modal-title">공부 기록 직접 추가</h3>
+        <p class="modal-desc">과목, 날짜, 시간, 집중도와 한 줄 메모를 입력해 저장하세요.</p>
+        <form id="manualRecordForm">
+          <div class="form-field">
+            <label for="manualSubjectSelect" class="form-label">과목</label>
+            <select id="manualSubjectSelect" class="select-input"></select>
+          </div>
+          <div class="form-field">
+            <label for="manualDateInput" class="form-label">날짜</label>
+            <input id="manualDateInput" class="text-input tabular" type="date" required="">
+          </div>
+          <div class="form-field">
+            <label for="manualMinutesInput" class="form-label">공부 시간 (분)</label>
+            <input id="manualMinutesInput" class="text-input tabular" type="number" min="1" max="720" value="30" required="">
+          </div>
+          <div class="form-field">
+            <label class="form-label">집중도</label>
+            <div id="manualFocusGrid" class="focus-score-grid">
+              <button type="button" class="focus-score-btn" data-score="1"><span class="focus-score-num">1</span></button>
+              <button type="button" class="focus-score-btn" data-score="2"><span class="focus-score-num">2</span></button>
+              <button type="button" class="focus-score-btn" data-score="3"><span class="focus-score-num">3</span></button>
+              <button type="button" class="focus-score-btn is-selected" data-score="4"><span class="focus-score-num">4</span></button>
+              <button type="button" class="focus-score-btn" data-score="5"><span class="focus-score-num">5</span></button>
+            </div>
+          </div>
+          <div class="form-field">
+            <label for="manualMemoInput" class="form-label">한 줄 메모 (선택)</label>
+            <input id="manualMemoInput" class="text-input" type="text" maxlength="40" placeholder="예: 미적분 문제집 20문항">
+          </div>
+          <div class="modal-actions">
+            <button id="manualCancelBtn" type="button" class="btn-ghost">취소</button>
+            <button type="submit" class="btn-secondary">저장</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 시험/수행평가 D-Day 추가 모달 -->
+    <div id="examModalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="examModalTitle">
+      <div class="modal-sheet">
+        <h3 id="examModalTitle" class="modal-title">시험 · 수행평가 일정 추가</h3>
+        <p class="modal-desc">중간고사, 기말고사, 수행평가 마감일을 여러 개 등록할 수 있어요.</p>
+        <form id="examGoalForm">
+          <div class="form-field">
+            <label for="examTitleInput" class="form-label">일정 이름</label>
+            <input id="examTitleInput" class="text-input" type="text" maxlength="20" placeholder="예: 2학기 기말고사" required="">
+          </div>
+          <div class="form-field">
+            <label for="examDateInput" class="form-label">날짜</label>
+            <input id="examDateInput" class="text-input tabular" type="date" required="">
+          </div>
+          <div class="modal-actions">
+            <button id="examCancelBtn" type="button" class="btn-ghost">취소</button>
+            <button type="submit" class="btn-secondary">추가하기</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 과목 이름 · 색상 수정 모달 -->
+    <div id="editSubjectBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="editSubjectTitle">
+      <div class="modal-sheet">
+        <h3 id="editSubjectTitle" class="modal-title">과목 정보 수정</h3>
+        <p class="modal-desc">이름이나 색상을 바꾸면 기존 기록과 그래프에도 반영됩니다.</p>
+        <form id="editSubjectForm">
+          <div class="form-field">
+            <label for="editSubjectNameInput" class="form-label">과목 이름</label>
+            <input id="editSubjectNameInput" class="text-input" type="text" maxlength="16" required="">
+          </div>
+          <div class="form-field">
+            <span class="form-label">과목 색상</span>
+            <div id="editColorPalette" class="color-palette" role="radiogroup" aria-label="수정할 과목 색상"></div>
+          </div>
+          <div class="modal-actions">
+            <button id="editSubjectCancelBtn" type="button" class="btn-ghost">취소</button>
+            <button type="submit" class="btn-secondary">수정 저장</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 삭제/초기화 확인 모달 -->
+    <div id="confirmModalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+      <div class="modal-sheet">
+        <h3 id="confirmModalTitle" class="modal-title">확인</h3>
+        <p id="confirmModalDesc" class="modal-desc"></p>
+        <div class="modal-actions">
+          <button id="confirmCancelBtn" type="button" class="btn-ghost">취소</button>
+          <button id="confirmOkBtn" type="button" class="btn-danger-solid">진행하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 하단 알림 토스트 -->
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      (function () {
+        'use strict';
+
+        // 동적 렌더링 및 개발 서버 주입 태그가 섞이지 않은 초기 단일 index.html 스냅샷 보관
+        var pristineHtmlSnapshot = (function capturePristineHtml() {
+          try {
+            if (!document.head || !document.body || typeof document.head.cloneNode !== 'function') {
+              return '';
+            }
+            var headClone = document.head.cloneNode(true);
+            var bodyClone = document.body.cloneNode(true);
+            var stripInjected = function (container) {
+              var nodes = container.querySelectorAll('script[src], script[type="module"], link[rel="modulepreload"], style[data-vite-dev-id]');
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].parentNode) nodes[i].parentNode.removeChild(nodes[i]);
+              }
+            };
+            stripInjected(headClone);
+            stripInjected(bodyClone);
+            return '<!doctype html>\n<html lang="ko">\n  ' + headClone.outerHTML + '\n\n  ' + bodyClone.outerHTML + '\n</html>\n';
+          } catch (e) {
+            return '';
+          }
+        })();
+
+        // =========================================================================
+        // 1. 상수 및 기본 데이터
+        // =========================================================================
+        var STORAGE_KEY = 'studylog_v1';
+        var VALID_PAGES = ['timer', 'analytics', 'records', 'goals', 'manage'];
+
+        var SUBJECT_COLORS = [
+          '#E11D48', '#2563EB', '#059669', '#D97706',
+          '#7C3AED', '#0891B2', '#DB2777', '#4F46E5'
+        ];
+
+        var WEEKDAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'];
+
+        var DEFAULT_SUBJECTS = [
+          { id: 'sub_kor', name: '국어', color: '#E11D48', weeklyGoalMinutes: 300 },
+          { id: 'sub_math', name: '수학', color: '#2563EB', weeklyGoalMinutes: 480 },
+          { id: 'sub_eng', name: '영어', color: '#059669', weeklyGoalMinutes: 300 }
+        ];
+
+        // 집중도 점수(1~5점)별 맞춤 공부 배경 음악 및 내장 사운드 데이터
+        var FOCUS_MUSIC_MAP = {
+          1: {
+            score: 1,
+            stateLabel: '1점 (흐트러짐)',
+            genre: '화이트 노이즈 · 브라운 노이즈',
+            reason: '잡념이 많거나 주변 소음이 방해될 때는 멜로디보다 일정한 주파수의 노이즈가 집중 진입에 가장 효과적이에요.',
+            noiseType: 'brown',
+            noiseLabel: '브라운 노이즈 바로 듣기',
+            playlists: [
+              { title: '집중력을 높여주는 딥 브라운 노이즈 3시간', platform: 'YouTube 검색 플레이리스트', url: 'https://www.youtube.com/results?search_query=deep+brown+noise+for+studying' },
+              { title: '도서관 정적 느낌 백색소음 (White Noise)', platform: 'YouTube 검색 플레이리스트', url: 'https://www.youtube.com/results?search_query=study+white+noise+library' },
+              { title: 'White Noise & Focus Sounds', platform: 'Spotify 플레이리스트 검색', url: 'https://open.spotify.com/search/white%20noise%20focus' }
+            ]
+          },
+          2: {
+            score: 2,
+            stateLabel: '2점 (아쉬움)',
+            genre: '빗소리 & 잔잔한 앰비언트 피아노',
+            reason: '산만한 마음을 차분히 가라앉힐 수 있도록 느린 템포의 피아노 선율과 자연 빗소리 조합을 추천해요.',
+            noiseType: 'pink',
+            noiseLabel: '빗소리 느낌 핑크 노이즈 듣기',
+            playlists: [
+              { title: '창밖 빗소리와 잔잔한 공부 피아노 BGM', platform: 'YouTube 검색 플레이리스트', url: 'https://www.youtube.com/results?search_query=rain+ambient+piano+study+bgm' },
+              { title: '스튜디오 지브리 오르골 · 차분한 연주곡 모음', platform: 'YouTube 검색 플레이리스트', url: 'https://www.youtube.com/results?search_query=calm+piano+music+box+study' },
+              { title: 'Rainy Day Study Piano', platform: 'Spotify 플레이리스트 검색', url: 'https://open.spotify.com/search/rainy%20study%20piano' }
+            ]
+          },
+          3: {
+            score: 3,
+            stateLabel: '3점 (보통)',
+            genre: '로파이 힙합 (Lo-fi Hip Hop Beats)',
+            reason: '무난한 집중 상태에서는 일정한 비트의 Lo-fi 음악이 문제 풀이·암기 리듬을 지루하지 않게 유지해 줘요.',
+            noiseType: 'pink',
+            noiseLabel: '부드러운 핑크 노이즈 듣기',
+            playlists: [
+              { title: '공부할 때 틀어놓는 Lo-fi 힙합 칠 비트', platform: 'YouTube 검색 플레이리스트', url: 'https://www.youtube.com/results?search_query=lofi+hip+hop+beats+to+study' },
+              { title: '새벽 독서실 감성 로파이 믹스', platform: 'YouTube 검색 플레이리스트', url: 'https://www.youtube.com/results?search_query=chill+lofi+study+mix' },
+              { title: 'Lofi Beats for Studying', platform: 'Spotify 플레이리스트 검색', url: 'https://open.spotify.com/search/lofi%20beats%20study' }
+            ]
+          },
+          4: {
+            score: 4,
+            stateLabel: '4점 (좋음)',
+            genre: '클래식 · 네오클래식 인스트루멘탈',
+            reason: '집중력이 잘 올라온 상태예요. 가사 없는 클래식 피아노와 현악 선율로 현재의 몰입 흐름을 길게 이어가 보세요.',
+            noiseType: 'soft',
+            noiseLabel: '잔잔한 공기음 노이즈 듣기',
+            playlists: [
+              { title: '모차르트 · 쇼팽 공부 집중 클래식 피아노', platform: 'YouTube 검색 플레이리스트', url: 'https://www.youtube.com/results?search_query=classical+piano+music+for+studying' },
+              { title: '집중력을 깨우는 네오클래식 인스트루멘탈', platform: 'YouTube 검색 플레이리스트', url: 'https://www.youtube.com/results?search_query=neoclassical+focus+instrumental+playlist' },
+              { title: 'Classical Focus & Concentration', platform: 'Spotify 플레이리스트 검색', url: 'https://open.spotify.com/search/classical%20focus' }
+            ]
+          },
+          5: {
+            score: 5,
+            stateLabel: '5점 (최고)',
+            genre: '초집중 미니멀 앰비언트 (또는 무음 유지)',
+            reason: '이미 최고 몰입 상태입니다! 익숙한 정적을 유지하거나, 리듬 변화가 거의 없는 미니멀 앰비언트만 곁들여 보세요.',
+            noiseType: 'brown',
+            noiseLabel: '미세한 공간 저음 노이즈 듣기',
+            playlists: [
+              { title: '가사 없는 극미니멀 딥 포커스 앰비언트', platform: 'YouTube 검색 플레이리스트', url: 'https://www.youtube.com/results?search_query=minimal+ambient+deep+focus+study' },
+              { title: '조용한 서재 백색 공간음 2시간', platform: 'YouTube 검색 플레이리스트', url: 'https://www.youtube.com/results?search_query=quiet+study+room+ambience' },
+              { title: 'Deep Focus Minimal Instrumental', platform: 'Spotify 플레이리스트 검색', url: 'https://open.spotify.com/search/deep%20focus%20minimal' }
+            ]
+          }
+        };
+
+        // 영구 저장 상태
+        var state = {
+          subjects: [],
+          records: [],
+          activeSession: null,
+          selectedSubjectId: null,
+          examGoals: [], // [{ id, title, date }]
+          autoPauseOnLeave: true,
+          noiseVolume: 0.14,
+          theme: 'light'
+        };
+
+        // UI 상태
+        var uiState = {
+          currentPage: 'timer',
+          analyticsPeriod: 'today', // 'today' | 'week' | 'month' | 'all'
+          selectedColor: SUBJECT_COLORS[3],
+          selectedWeekDate: null,
+          selectedMusicScore: 3,
+          guideMinutes: 0, // 0(자유) | 25 | 50
+          guideNotifiedForSession: false,
+          manualFocus: 4,
+          editingRecordId: null,
+          editingSubjectId: null,
+          editingColor: SUBJECT_COLORS[0],
+          pendingConfirmAction: null
+        };
+
+        var timerIntervalId = null;
+        var toastTimerId = null;
+        var ambientAudio = { ctx: null, source: null, gain: null, activeType: null };
+
+        // =========================================================================
+        // 2. DOM 요소 참조
+        // =========================================================================
+        var el = {
+          topbarDownloadHtmlBtn: document.getElementById('topbarDownloadHtmlBtn'),
+          themeToggleBtn: document.getElementById('themeToggleBtn'),
+          themeToggleLabel: document.getElementById('themeToggleLabel'),
+          miniTimerBar: document.getElementById('miniTimerBar'),
+          miniTimerDot: document.getElementById('miniTimerDot'),
+          miniTimerSubject: document.getElementById('miniTimerSubject'),
+          miniTimerClock: document.getElementById('miniTimerClock'),
+          miniTimerResumeBtn: document.getElementById('miniTimerResumeBtn'),
+          miniTimerStopBtn: document.getElementById('miniTimerStopBtn'),
+
+          homeDdayTag: document.getElementById('homeDdayTag'),
+          timerSection: document.getElementById('timer-section'),
+          timerSubjectDot: document.getElementById('timerSubjectDot'),
+          timerSubjectText: document.getElementById('timerSubjectText'),
+          timerStartedAtText: document.getElementById('timerStartedAtText'),
+          timerClock: document.getElementById('timerClock'),
+          timerLiveAnnounce: document.getElementById('timerLiveAnnounce'),
+          leaveGuardDesc: document.getElementById('leaveGuardDesc'),
+          leaveGuardToggleBtn: document.getElementById('leaveGuardToggleBtn'),
+          leaveAlertBox: document.getElementById('leaveAlertBox'),
+          subjectSelectGrid: document.getElementById('subjectSelectGrid'),
+          primaryTimerBtn: document.getElementById('primaryTimerBtn'),
+          pauseResumeBtn: document.getElementById('pauseResumeBtn'),
+          timerHint: document.getElementById('timerHint'),
+
+          homeTodayTotal: document.getElementById('homeTodayTotal'),
+          homeWeekTotal: document.getElementById('homeWeekTotal'),
+          homeLatestFocus: document.getElementById('homeLatestFocus'),
+          homeQuickAddBtn: document.getElementById('homeQuickAddBtn'),
+          homeTodayRatioWrap: document.getElementById('homeTodayRatioWrap'),
+          homeRecentRecordsList: document.getElementById('homeRecentRecordsList'),
+          homeMusicBody: document.getElementById('homeMusicBody'),
+
+          analyticsPeriodTabs: document.getElementById('analyticsPeriodTabs'),
+          anTotalTime: document.getElementById('anTotalTime'),
+          anSessionCount: document.getElementById('anSessionCount'),
+          anDailyAvg: document.getElementById('anDailyAvg'),
+          anActiveDays: document.getElementById('anActiveDays'),
+          anTopSubject: document.getElementById('anTopSubject'),
+          anTopShare: document.getElementById('anTopShare'),
+          anAvgFocus: document.getElementById('anAvgFocus'),
+          anBestBand: document.getElementById('anBestBand'),
+          anChartTitle: document.getElementById('anChartTitle'),
+          anChartCaption: document.getElementById('anChartCaption'),
+          anRatioBarWrap: document.getElementById('anRatioBarWrap'),
+          anChartContainer: document.getElementById('anChartContainer'),
+          anSubjectTotals: document.getElementById('anSubjectTotals'),
+          anTimebandBody: document.getElementById('anTimebandBody'),
+          anFocusMeta: document.getElementById('anFocusMeta'),
+          anFocusBody: document.getElementById('anFocusBody'),
+
+          recManualAddBtn: document.getElementById('recManualAddBtn'),
+          exportCsvBtn: document.getElementById('exportCsvBtn'),
+          recSubjectFilter: document.getElementById('recSubjectFilter'),
+          recPeriodFilter: document.getElementById('recPeriodFilter'),
+          recFocusFilter: document.getElementById('recFocusFilter'),
+          recSearchInput: document.getElementById('recSearchInput'),
+          recFilterSummary: document.getElementById('recFilterSummary'),
+          recResetFilterBtn: document.getElementById('recResetFilterBtn'),
+          recGroupedContainer: document.getElementById('recGroupedContainer'),
+
+          openExamModalBtn: document.getElementById('openExamModalBtn'),
+          adviceBanner: document.getElementById('adviceBanner'),
+          adviceKicker: document.getElementById('adviceKicker'),
+          adviceText: document.getElementById('adviceText'),
+          adviceSub: document.getElementById('adviceSub'),
+          adviceBalanceNote: document.getElementById('adviceBalanceNote'),
+          goalProgressList: document.getElementById('goalProgressList'),
+          ddayCountMeta: document.getElementById('ddayCountMeta'),
+          ddayList: document.getElementById('ddayList'),
+
+          subjectCountMeta: document.getElementById('subjectCountMeta'),
+          addSubjectForm: document.getElementById('addSubjectForm'),
+          newSubjectName: document.getElementById('newSubjectName'),
+          colorPalette: document.getElementById('colorPalette'),
+          subjectManageList: document.getElementById('subjectManageList'),
+          manageLeaveGuardBtn: document.getElementById('manageLeaveGuardBtn'),
+          manageThemeBtn: document.getElementById('manageThemeBtn'),
+          noiseVolumeRange: document.getElementById('noiseVolumeRange'),
+          downloadHtmlBtn: document.getElementById('downloadHtmlBtn'),
+          exportJsonBtn: document.getElementById('exportJsonBtn'),
+          importJsonBtn: document.getElementById('importJsonBtn'),
+          importJsonInput: document.getElementById('importJsonInput'),
+          resetAllRecordsBtn: document.getElementById('resetAllRecordsBtn'),
+          musicScopeMeta: document.getElementById('musicScopeMeta'),
+          musicScoreTabs: document.getElementById('musicScoreTabs'),
+          musicDashboardBody: document.getElementById('musicDashboardBody'),
+
+          stopModalBackdrop: document.getElementById('stopModalBackdrop'),
+          stopStepEvaluate: document.getElementById('stopStepEvaluate'),
+          stopStepMusic: document.getElementById('stopStepMusic'),
+          stopMusicTitle: document.getElementById('stopMusicTitle'),
+          stopMusicDesc: document.getElementById('stopMusicDesc'),
+          stopMusicBody: document.getElementById('stopMusicBody'),
+          stopMusicCloseBtn: document.getElementById('stopMusicCloseBtn'),
+          stopModalDesc: document.getElementById('stopModalDesc'),
+          stopMemoInput: document.getElementById('stopMemoInput'),
+          focusScoreGrid: document.getElementById('focusScoreGrid'),
+          discardSessionBtn: document.getElementById('discardSessionBtn'),
+          resumeSessionBtn: document.getElementById('resumeSessionBtn'),
+          saveWithoutFocusBtn: document.getElementById('saveWithoutFocusBtn'),
+
+          manualModalBackdrop: document.getElementById('manualModalBackdrop'),
+          manualModalTitle: document.getElementById('manualModalTitle'),
+          manualRecordForm: document.getElementById('manualRecordForm'),
+          manualSubjectSelect: document.getElementById('manualSubjectSelect'),
+          manualDateInput: document.getElementById('manualDateInput'),
+          manualMinutesInput: document.getElementById('manualMinutesInput'),
+          manualFocusGrid: document.getElementById('manualFocusGrid'),
+          manualMemoInput: document.getElementById('manualMemoInput'),
+          manualCancelBtn: document.getElementById('manualCancelBtn'),
+
+          examModalBackdrop: document.getElementById('examModalBackdrop'),
+          examGoalForm: document.getElementById('examGoalForm'),
+          examTitleInput: document.getElementById('examTitleInput'),
+          examDateInput: document.getElementById('examDateInput'),
+          examCancelBtn: document.getElementById('examCancelBtn'),
+
+          editSubjectBackdrop: document.getElementById('editSubjectBackdrop'),
+          editSubjectForm: document.getElementById('editSubjectForm'),
+          editSubjectNameInput: document.getElementById('editSubjectNameInput'),
+          editColorPalette: document.getElementById('editColorPalette'),
+          editSubjectCancelBtn: document.getElementById('editSubjectCancelBtn'),
+
+          confirmModalBackdrop: document.getElementById('confirmModalBackdrop'),
+          confirmModalTitle: document.getElementById('confirmModalTitle'),
+          confirmModalDesc: document.getElementById('confirmModalDesc'),
+          confirmCancelBtn: document.getElementById('confirmCancelBtn'),
+          confirmOkBtn: document.getElementById('confirmOkBtn'),
+
+          toast: document.getElementById('toast')
+        };
+
+        // =========================================================================
+        // 3. 안전한 localStorage 읽기 / 쓰기 및 마이그레이션
+        // =========================================================================
+        function createDefaultState() {
+          var prefersDark = false;
+          try {
+            prefersDark = Boolean(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          } catch (e) {
+            prefersDark = false;
+          }
+          return {
+            subjects: DEFAULT_SUBJECTS.map(function (s) {
+              return { id: s.id, name: s.name, color: s.color, weeklyGoalMinutes: s.weeklyGoalMinutes };
+            }),
+            records: [],
+            activeSession: null,
+            selectedSubjectId: DEFAULT_SUBJECTS[0].id,
+            examGoals: [],
+            autoPauseOnLeave: true,
+            noiseVolume: 0.14,
+            theme: prefersDark ? 'dark' : 'light'
+          };
+        }
+
+        function sanitizeLoadedState(raw) {
+          var fallback = createDefaultState();
+          if (!raw || typeof raw !== 'object') return fallback;
+
+          var subjects = [];
+          if (Array.isArray(raw.subjects)) {
+            subjects = raw.subjects
+              .filter(function (s) {
+                return s && typeof s.id === 'string' && typeof s.name === 'string' && s.name.trim().length > 0;
+              })
+              .map(function (s, idx) {
+                var goalMin = Number(s.weeklyGoalMinutes);
+                return {
+                  id: s.id,
+                  name: s.name.trim().slice(0, 20),
+                  color: typeof s.color === 'string' && s.color ? s.color : SUBJECT_COLORS[idx % SUBJECT_COLORS.length],
+                  weeklyGoalMinutes: Number.isFinite(goalMin) && goalMin >= 0 ? Math.round(goalMin) : 0
+                };
+              });
+          } else {
+            subjects = fallback.subjects;
+          }
+
+          var records = [];
+          if (Array.isArray(raw.records)) {
+            records = raw.records
+              .filter(function (r) {
+                return (
+                  r &&
+                  typeof r.id === 'string' &&
+                  typeof r.date === 'string' &&
+                  Number.isFinite(Number(r.durationSeconds)) &&
+                  Number(r.durationSeconds) > 0
+                );
+              })
+              .map(function (r) {
+                var focusVal = r.focus === null || r.focus === undefined ? null : Number(r.focus);
+                if (focusVal !== null && (!Number.isInteger(focusVal) || focusVal < 1 || focusVal > 5)) {
+                  focusVal = null;
+                }
+                return {
+                  id: r.id,
+                  subjectId: typeof r.subjectId === 'string' ? r.subjectId : '',
+                  subjectName: typeof r.subjectName === 'string' && r.subjectName ? r.subjectName : '삭제된 과목',
+                  subjectColor: typeof r.subjectColor === 'string' && r.subjectColor ? r.subjectColor : '#64748B',
+                  date: r.date,
+                  startedAt: Number.isFinite(Number(r.startedAt)) ? Number(r.startedAt) : Date.now(),
+                  endedAt: Number.isFinite(Number(r.endedAt)) ? Number(r.endedAt) : Date.now(),
+                  durationSeconds: Math.max(1, Math.floor(Number(r.durationSeconds))),
+                  focus: focusVal,
+                  memo: typeof r.memo === 'string' ? r.memo.trim().slice(0, 60) : ''
+                };
+              });
+          }
+
+          var activeSession = null;
+          if (raw.activeSession && typeof raw.activeSession === 'object' && typeof raw.activeSession.subjectId === 'string') {
+            var exists = subjects.some(function (s) { return s.id === raw.activeSession.subjectId; });
+            if (exists) {
+              var acc = Number(raw.activeSession.accumulatedSeconds);
+              var startedAtNum = Number(raw.activeSession.startedAt);
+              var leaveCnt = Number(raw.activeSession.leavePauseCount);
+              activeSession = {
+                subjectId: raw.activeSession.subjectId,
+                startedAt: Number.isFinite(startedAtNum) ? startedAtNum : Date.now(),
+                accumulatedSeconds: Number.isFinite(acc) && acc >= 0 ? Math.floor(acc) : 0,
+                isPaused: Boolean(raw.activeSession.isPaused),
+                pausedReason: raw.activeSession.pausedReason === 'leave' || raw.activeSession.pausedReason === 'manual' ? raw.activeSession.pausedReason : null,
+                leavePauseCount: Number.isFinite(leaveCnt) && leaveCnt >= 0 ? Math.floor(leaveCnt) : 0,
+                leaveNotified: Boolean(raw.activeSession.leaveNotified)
+              };
+            }
+          }
+
+          var selectedSubjectId = null;
+          if (activeSession) {
+            selectedSubjectId = activeSession.subjectId;
+          } else if (typeof raw.selectedSubjectId === 'string' && subjects.some(function (s) { return s.id === raw.selectedSubjectId; })) {
+            selectedSubjectId = raw.selectedSubjectId;
+          } else if (subjects.length > 0) {
+            selectedSubjectId = subjects[0].id;
+          }
+
+          // 기존 단일 examGoal을 배열 examGoals로 안전하게 마이그레이션
+          var examGoals = [];
+          if (Array.isArray(raw.examGoals)) {
+            examGoals = raw.examGoals
+              .filter(function (g) {
+                return g && typeof g.title === 'string' && g.title.trim() && typeof g.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(g.date);
+              })
+              .map(function (g) {
+                return { id: typeof g.id === 'string' ? g.id : generateId('exam'), title: g.title.trim().slice(0, 24), date: g.date };
+              });
+          } else if (
+            raw.examGoal &&
+            typeof raw.examGoal === 'object' &&
+            typeof raw.examGoal.title === 'string' &&
+            raw.examGoal.title.trim() &&
+            typeof raw.examGoal.date === 'string' &&
+            /^\d{4}-\d{2}-\d{2}$/.test(raw.examGoal.date)
+          ) {
+            examGoals = [{ id: generateId('exam'), title: raw.examGoal.title.trim().slice(0, 24), date: raw.examGoal.date }];
+          }
+
+          var vol = Number(raw.noiseVolume);
+          if (!Number.isFinite(vol) || vol < 0.02 || vol > 0.4) vol = 0.14;
+
+          var theme = raw.theme === 'dark' || raw.theme === 'light' ? raw.theme : fallback.theme;
+
+          var autoPauseOnLeave = raw.autoPauseOnLeave === false ? false : true;
+
+          return {
+            subjects: subjects,
+            records: records,
+            activeSession: activeSession,
+            selectedSubjectId: selectedSubjectId,
+            examGoals: examGoals,
+            autoPauseOnLeave: autoPauseOnLeave,
+            noiseVolume: vol,
+            theme: theme
+          };
+        }
+
+        function loadState() {
+          try {
+            var rawText = localStorage.getItem(STORAGE_KEY);
+            if (!rawText) {
+              state = createDefaultState();
+              saveState();
+              return;
+            }
+            var parsed = JSON.parse(rawText);
+            state = sanitizeLoadedState(parsed);
+            if (parsed && !Array.isArray(parsed.examGoals) && parsed.examGoal) {
+              saveState();
+            }
+          } catch (e) {
+            state = createDefaultState();
+          }
+        }
+
+        function saveState() {
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+          } catch (e) {
+            showToast('저장 공간 접근이 제한되어 현재 화면에만 유지됩니다.');
+          }
+        }
+
+        // =========================================================================
+        // 4. 날짜 / 시간 / 페이지 라우터 유틸리티
+        // =========================================================================
+        function pad2(num) {
+          return num < 10 ? '0' + num : String(num);
+        }
+
+        function toLocalDateStr(timestampOrDate) {
+          var d = timestampOrDate instanceof Date ? timestampOrDate : new Date(timestampOrDate);
+          return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+        }
+
+        function diffDaysFromToday(dateStr) {
+          var parts = dateStr.split('-');
+          if (parts.length !== 3) return null;
+          var target = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+          var now = new Date();
+          var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          return Math.round((target.getTime() - today.getTime()) / 86400000);
+        }
+
+        function formatClock(totalSeconds) {
+          var sec = Math.max(0, Math.floor(totalSeconds));
+          var h = Math.floor(sec / 3600);
+          var m = Math.floor((sec % 3600) / 60);
+          var s = sec % 60;
+          return pad2(h) + ':' + pad2(m) + ':' + pad2(s);
+        }
+
+        function formatDurationKo(totalSeconds) {
+          var sec = Math.max(0, Math.floor(totalSeconds));
+          if (sec === 0) return '0분';
+          if (sec < 60) return sec + '초';
+          var h = Math.floor(sec / 3600);
+          var m = Math.floor((sec % 3600) / 60);
+          if (h > 0 && m > 0) return h + '시간 ' + m + '분';
+          if (h > 0) return h + '시간';
+          return m + '분';
+        }
+
+        function formatDurationShort(totalSeconds) {
+          var sec = Math.max(0, Math.floor(totalSeconds));
+          if (sec === 0) return '';
+          if (sec < 60) return sec + '초';
+          var min = Math.round(sec / 60);
+          if (min < 60) return min + '분';
+          var hours = (sec / 3600).toFixed(1).replace(/\.0$/, '');
+          return hours + '시간';
+        }
+
+        function formatTimeHHMM(timestamp) {
+          var d = new Date(timestamp);
+          return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+        }
+
+        function getCurrentWeekDates() {
+          var now = new Date();
+          var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          var dayOfWeek = today.getDay();
+          var diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+          var monday = new Date(today);
+          monday.setDate(today.getDate() + diffToMonday);
+
+          var dates = [];
+          for (var i = 0; i < 7; i++) {
+            var d = new Date(monday);
+            d.setDate(monday.getDate() + i);
+            dates.push({ dateStr: toLocalDateStr(d), weekday: WEEKDAY_LABELS[i], dayNum: d.getDate() });
+          }
+          return dates;
+        }
+
+        function getLastNDates(n) {
+          var dates = [];
+          var now = new Date();
+          var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          for (var i = n - 1; i >= 0; i--) {
+            var d = new Date(today);
+            d.setDate(today.getDate() - i);
+            dates.push(toLocalDateStr(d));
+          }
+          return dates;
+        }
+
+        function generateId(prefix) {
+          return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+        }
+
+        function findSubjectById(id) {
+          for (var i = 0; i < state.subjects.length; i++) {
+            if (state.subjects[i].id === id) return state.subjects[i];
+          }
+          return null;
+        }
+
+        // 해시 기반 다중 페이지 라우터
+        function parsePageFromHash() {
+          var raw = (window.location.hash || '').replace(/^#\/?/, '');
+          if (VALID_PAGES.indexOf(raw) !== -1) return raw;
+          return 'timer';
+        }
+
+        function navigateToPage(pageName) {
+          if (VALID_PAGES.indexOf(pageName) === -1) pageName = 'timer';
+          uiState.currentPage = pageName;
+
+          for (var i = 0; i < VALID_PAGES.length; i++) {
+            var p = VALID_PAGES[i];
+            var section = document.getElementById('page-' + p);
+            if (section) section.classList.toggle('is-active', p === pageName);
+          }
+
+          var links = document.querySelectorAll('[data-page-link]');
+          for (var j = 0; j < links.length; j++) {
+            var target = links[j].getAttribute('data-page-link');
+            links[j].classList.toggle('is-active', target === pageName);
+          }
+
+          updateMiniTimerBar();
+          if (window.scrollTo) window.scrollTo({ top: 0, behavior: 'auto' });
+        }
+
+        // =========================================================================
+        // 5. 토스트, 모달, 테마 제어
+        // =========================================================================
+        function showToast(message) {
+          el.toast.textContent = message;
+          el.toast.classList.add('is-visible');
+          if (toastTimerId) clearTimeout(toastTimerId);
+          toastTimerId = setTimeout(function () {
+            el.toast.classList.remove('is-visible');
+          }, 2500);
+        }
+
+        function applyTheme() {
+          var isDark = state.theme === 'dark';
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+            el.themeToggleLabel.textContent = '라이트 모드';
+            el.themeToggleBtn.setAttribute('aria-label', '라이트 모드로 전환');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.removeAttribute('data-theme');
+            el.themeToggleLabel.textContent = '다크 모드';
+            el.themeToggleBtn.setAttribute('aria-label', '다크 모드로 전환');
+          }
+        }
+
+        function toggleTheme() {
+          state.theme = state.theme === 'dark' ? 'light' : 'dark';
+          applyTheme();
+          saveState();
+        }
+
+        function openConfirmModal(title, desc, onConfirm) {
+          el.confirmModalTitle.textContent = title;
+          el.confirmModalDesc.textContent = desc;
+          uiState.pendingConfirmAction = onConfirm;
+          el.confirmModalBackdrop.classList.add('is-open');
+          el.confirmOkBtn.focus();
+        }
+
+        function closeConfirmModal() {
+          uiState.pendingConfirmAction = null;
+          el.confirmModalBackdrop.classList.remove('is-open');
+        }
+
+        function closeAllModals() {
+          el.stopModalBackdrop.classList.remove('is-open');
+          el.manualModalBackdrop.classList.remove('is-open');
+          el.examModalBackdrop.classList.remove('is-open');
+          el.editSubjectBackdrop.classList.remove('is-open');
+          closeConfirmModal();
+        }
+
+        // =========================================================================
+        // 6. 타이머 핵심 로직 (시작 시각 timestamp + 일시정지 누적)
+        // =========================================================================
+        function getActiveElapsedSeconds() {
+          if (!state.activeSession) return 0;
+          var base = state.activeSession.accumulatedSeconds || 0;
+          if (state.activeSession.isPaused) return Math.max(0, base);
+          return base + Math.max(0, Math.floor((Date.now() - state.activeSession.startedAt) / 1000));
+        }
+
+        function updateMiniTimerBar() {
+          var showMini = Boolean(state.activeSession) && uiState.currentPage !== 'timer';
+          el.miniTimerBar.classList.toggle('is-visible', showMini);
+          if (!showMini || !state.activeSession) return;
+
+          var subj = findSubjectById(state.activeSession.subjectId);
+          var isPaused = Boolean(state.activeSession.isPaused);
+          var pausedByLeave = isPaused && state.activeSession.pausedReason === 'leave';
+          el.miniTimerBar.classList.toggle('is-paused', isPaused);
+          el.miniTimerDot.style.backgroundColor = subj ? subj.color : '#64748B';
+          el.miniTimerSubject.textContent = (subj ? subj.name : '공부') + (pausedByLeave ? ' (이탈 정지)' : isPaused ? ' (일시정지)' : ' 측정 중');
+          el.miniTimerClock.textContent = formatClock(getActiveElapsedSeconds());
+          el.miniTimerResumeBtn.style.display = isPaused ? 'inline-flex' : 'none';
+        }
+
+        function updateTimerDisplay() {
+          if (state.activeSession) {
+            var elapsed = getActiveElapsedSeconds();
+            var subj = findSubjectById(state.activeSession.subjectId);
+            var subjName = subj ? subj.name : '공부 중';
+            var stateTag = state.activeSession.isPaused ? ' (일시정지)' : '';
+            el.timerClock.textContent = formatClock(elapsed);
+            document.title = formatClock(elapsed) + ' · ' + subjName + stateTag + ' - StudyLog';
+
+            if (
+              uiState.guideMinutes > 0 &&
+              !uiState.guideNotifiedForSession &&
+              !state.activeSession.isPaused &&
+              elapsed >= uiState.guideMinutes * 60
+            ) {
+              uiState.guideNotifiedForSession = true;
+              showToast(uiState.guideMinutes + '분 집중 목표를 채웠어요! 계속 공부하거나 정지해 보세요.');
+            }
+          } else {
+            el.timerClock.textContent = '00:00:00';
+            document.title = 'StudyLog - 과목별 공부 시간 측정 및 학습 분석';
+          }
+          updateMiniTimerBar();
+        }
+
+        function ensureTimerLoop() {
+          if (timerIntervalId) {
+            clearInterval(timerIntervalId);
+            timerIntervalId = null;
+          }
+          if (state.activeSession && !state.activeSession.isPaused) {
+            updateTimerDisplay();
+            timerIntervalId = setInterval(updateTimerDisplay, 250);
+          } else {
+            updateTimerDisplay();
+          }
+        }
+
+        function startTimer() {
+          if (state.subjects.length === 0) {
+            showToast('먼저 과목·설정 페이지에서 과목을 추가해 주세요.');
+            window.location.hash = '#/manage';
+            return;
+          }
+          var targetId = state.selectedSubjectId || state.subjects[0].id;
+          var subj = findSubjectById(targetId);
+          if (!subj) {
+            subj = state.subjects[0];
+            targetId = subj.id;
+          }
+
+          uiState.guideNotifiedForSession = false;
+          state.selectedSubjectId = targetId;
+          state.activeSession = {
+            subjectId: targetId,
+            startedAt: Date.now(),
+            accumulatedSeconds: 0,
+            isPaused: false,
+            pausedReason: null,
+            leavePauseCount: 0,
+            leaveNotified: false
+          };
+          saveState();
+          ensureTimerLoop();
+          renderTimerSection();
+          el.timerLiveAnnounce.textContent = subj.name + ' 공부 측정을 시작했습니다.';
+        }
+
+        function togglePauseResume() {
+          if (!state.activeSession) return;
+          if (state.activeSession.isPaused) {
+            state.activeSession.startedAt = Date.now();
+            state.activeSession.isPaused = false;
+            state.activeSession.pausedReason = null;
+            state.activeSession.leaveNotified = false;
+            showToast('공부 측정을 이어서 진행합니다.');
+          } else {
+            state.activeSession.accumulatedSeconds = getActiveElapsedSeconds();
+            state.activeSession.isPaused = true;
+            state.activeSession.pausedReason = 'manual';
+            showToast('잠깐 일시정지했어요.');
+          }
+          saveState();
+          ensureTimerLoop();
+          renderTimerSection();
+        }
+
+        // 사이트 이탈, 탭 전환, 다른 앱 실행 시 자동으로 공부 시간을 멈춤
+        function pauseSessionForLeave() {
+          if (!state.autoPauseOnLeave || !state.activeSession || state.activeSession.isPaused) return;
+          state.activeSession.accumulatedSeconds = getActiveElapsedSeconds();
+          state.activeSession.isPaused = true;
+          state.activeSession.pausedReason = 'leave';
+          state.activeSession.leavePauseCount = (state.activeSession.leavePauseCount || 0) + 1;
+          state.activeSession.leaveNotified = false;
+          saveState();
+          ensureTimerLoop();
+          renderTimerSection();
+        }
+
+        function notifyIfReturnedFromLeavePause() {
+          if (
+            state.activeSession &&
+            state.activeSession.isPaused &&
+            state.activeSession.pausedReason === 'leave' &&
+            !state.activeSession.leaveNotified
+          ) {
+            state.activeSession.leaveNotified = true;
+            saveState();
+            renderTimerSection();
+            showToast('다른 화면 이동이 감지되어 공부 시간이 멈췄어요.');
+          }
+        }
+
+        function toggleAutoPauseOnLeave() {
+          state.autoPauseOnLeave = !state.autoPauseOnLeave;
+          saveState();
+          renderTimerSection();
+          renderManagePage();
+          showToast(
+            state.autoPauseOnLeave
+              ? '이탈 시 자동 정지를 켰어요. 다른 앱·탭으로 가면 멈춥니다.'
+              : '이탈 시 자동 정지를 껐어요. 화면을 꺼도 계속 측정됩니다.'
+          );
+        }
+
+        function openStopModal() {
+          if (!state.activeSession) return;
+          var subj = findSubjectById(state.activeSession.subjectId);
+          var subjName = subj ? subj.name : '선택한 과목';
+          var elapsed = Math.max(1, getActiveElapsedSeconds());
+
+          el.stopMemoInput.value = '';
+          el.stopModalDesc.textContent =
+            subjName + ' · ' + formatDurationKo(elapsed) + ' (' + formatClock(elapsed) + ') 측정됨. 점수를 누르면 바로 저장돼요.';
+          el.stopStepEvaluate.style.display = 'block';
+          el.stopStepMusic.style.display = 'none';
+          el.stopModalBackdrop.classList.add('is-open');
+        }
+
+        function closeStopModal() {
+          el.stopModalBackdrop.classList.remove('is-open');
+          el.stopStepEvaluate.style.display = 'block';
+          el.stopStepMusic.style.display = 'none';
+        }
+
+        function finalizeAndSaveSession(focusScore) {
+          if (!state.activeSession) {
+            closeStopModal();
+            return;
+          }
+          var now = Date.now();
+          var durationSeconds = Math.max(1, getActiveElapsedSeconds());
+          var subj = findSubjectById(state.activeSession.subjectId);
+          var memoText = el.stopMemoInput.value.trim().slice(0, 40);
+
+          var record = {
+            id: generateId('rec'),
+            subjectId: state.activeSession.subjectId,
+            subjectName: subj ? subj.name : '삭제된 과목',
+            subjectColor: subj ? subj.color : '#64748B',
+            date: toLocalDateStr(now),
+            startedAt: now - durationSeconds * 1000,
+            endedAt: now,
+            durationSeconds: durationSeconds,
+            focus: focusScore,
+            memo: memoText
+          };
+
+          state.records.unshift(record);
+          state.activeSession = null;
+          if (focusScore && FOCUS_MUSIC_MAP[focusScore]) {
+            uiState.selectedMusicScore = focusScore;
+          }
+          saveState();
+          ensureTimerLoop();
+          renderAll();
+
+          var focusMsg = focusScore ? ' (집중도 ' + focusScore + '점)' : '';
+          showToast(record.subjectName + ' ' + formatDurationKo(durationSeconds) + ' 저장 완료' + focusMsg);
+          el.timerLiveAnnounce.textContent = record.subjectName + ' 공부 기록이 저장되었습니다.';
+
+          if (focusScore && FOCUS_MUSIC_MAP[focusScore]) {
+            el.stopMusicTitle.textContent = '기록 저장 완료! 다음 공부 배경 음악 추천';
+            el.stopMusicDesc.textContent =
+              record.subjectName + ' · ' + formatDurationKo(durationSeconds) + ' · 집중도 ' + focusScore + '점 기준';
+            renderMusicPanelInto(focusScore, el.stopMusicBody);
+            el.stopStepEvaluate.style.display = 'none';
+            el.stopStepMusic.style.display = 'block';
+          } else {
+            closeStopModal();
+          }
+        }
+
+        function discardActiveSession() {
+          state.activeSession = null;
+          saveState();
+          closeStopModal();
+          ensureTimerLoop();
+          renderTimerSection();
+          showToast('측정을 저장하지 않고 취소했어요.');
+        }
+
+        // =========================================================================
+        // 7. 과목, 기록 추가/수정/삭제, D-Day, 백업/복원/CSV
+        // =========================================================================
+        function addSubject(name, color) {
+          var trimmed = name.trim();
+          if (!trimmed) {
+            showToast('과목 이름을 입력해 주세요.');
+            el.newSubjectName.focus();
+            return;
+          }
+          var duplicate = state.subjects.some(function (s) {
+            return s.name.toLowerCase() === trimmed.toLowerCase();
+          });
+          if (duplicate) {
+            showToast('이미 같은 이름의 과목이 있어요.');
+            el.newSubjectName.focus();
+            return;
+          }
+
+          var newSub = {
+            id: generateId('sub'),
+            name: trimmed,
+            color: color || SUBJECT_COLORS[state.subjects.length % SUBJECT_COLORS.length],
+            weeklyGoalMinutes: 180
+          };
+          state.subjects.push(newSub);
+          if (!state.activeSession) state.selectedSubjectId = newSub.id;
+          uiState.selectedColor = SUBJECT_COLORS[(state.subjects.length + 1) % SUBJECT_COLORS.length];
+
+          saveState();
+          el.newSubjectName.value = '';
+          renderAll();
+          showToast('"' + newSub.name + '" 과목을 추가했어요.');
+        }
+
+        function openEditSubjectModal(subjectId) {
+          var subj = findSubjectById(subjectId);
+          if (!subj) return;
+          uiState.editingSubjectId = subjectId;
+          uiState.editingColor = subj.color;
+          el.editSubjectNameInput.value = subj.name;
+          renderEditColorPalette();
+          el.editSubjectBackdrop.classList.add('is-open');
+          el.editSubjectNameInput.focus();
+        }
+
+        function renderEditColorPalette() {
+          el.editColorPalette.innerHTML = '';
+          SUBJECT_COLORS.forEach(function (hex) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'color-swatch' + (uiState.editingColor === hex ? ' is-active' : '');
+            btn.style.backgroundColor = hex;
+            btn.setAttribute('aria-label', '색상 ' + hex);
+            btn.addEventListener('click', function () {
+              uiState.editingColor = hex;
+              renderEditColorPalette();
+            });
+            el.editColorPalette.appendChild(btn);
+          });
+        }
+
+        function saveEditedSubject(newName, newColor) {
+          var subj = findSubjectById(uiState.editingSubjectId);
+          if (!subj) return;
+          var trimmed = newName.trim();
+          if (!trimmed) {
+            showToast('과목 이름을 입력해 주세요.');
+            return;
+          }
+          var duplicate = state.subjects.some(function (s) {
+            return s.id !== subj.id && s.name.toLowerCase() === trimmed.toLowerCase();
+          });
+          if (duplicate) {
+            showToast('이미 같은 이름의 과목이 있어요.');
+            return;
+          }
+          subj.name = trimmed;
+          subj.color = newColor;
+          saveState();
+          el.editSubjectBackdrop.classList.remove('is-open');
+          renderAll();
+          showToast('과목 정보를 수정했어요.');
+        }
+
+        function deleteSubject(subjectId) {
+          var subj = findSubjectById(subjectId);
+          if (!subj) return;
+          if (state.activeSession && state.activeSession.subjectId === subjectId) {
+            showToast('측정 중인 과목은 정지 후 삭제할 수 있어요.');
+            return;
+          }
+          openConfirmModal(
+            '"' + subj.name + '" 과목을 삭제할까요?',
+            '과목을 삭제해도 기존에 저장된 공부 기록과 통계는 유지됩니다.',
+            function () {
+              state.subjects = state.subjects.filter(function (s) { return s.id !== subjectId; });
+              if (state.selectedSubjectId === subjectId) {
+                state.selectedSubjectId = state.subjects.length > 0 ? state.subjects[0].id : null;
+              }
+              saveState();
+              renderAll();
+              showToast('"' + subj.name + '" 과목을 삭제했어요.');
+            }
+          );
+        }
+
+        function updateSubjectGoalHours(subjectId, hoursValue) {
+          var subj = findSubjectById(subjectId);
+          if (!subj) return;
+          var parsed = parseFloat(hoursValue);
+          if (!Number.isFinite(parsed) || parsed < 0) parsed = 0;
+          if (parsed > 168) parsed = 168;
+          subj.weeklyGoalMinutes = Math.round(parsed * 60);
+          saveState();
+          renderGoalsPage();
+        }
+
+        function openManualRecordModal(editRecordId) {
+          if (state.subjects.length === 0 && !editRecordId) {
+            showToast('먼저 과목을 추가해 주세요.');
+            window.location.hash = '#/manage';
+            return;
+          }
+
+          uiState.editingRecordId = editRecordId || null;
+          el.manualSubjectSelect.innerHTML = '';
+          state.subjects.forEach(function (s) {
+            var opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = s.name;
+            el.manualSubjectSelect.appendChild(opt);
+          });
+
+          if (editRecordId) {
+            var target = null;
+            for (var i = 0; i < state.records.length; i++) {
+              if (state.records[i].id === editRecordId) { target = state.records[i]; break; }
+            }
+            if (!target) return;
+            el.manualModalTitle.textContent = '공부 기록 수정';
+            if (findSubjectById(target.subjectId)) {
+              el.manualSubjectSelect.value = target.subjectId;
+            } else {
+              var oldOpt = document.createElement('option');
+              oldOpt.value = target.subjectId;
+              oldOpt.textContent = target.subjectName + ' (삭제됨)';
+              el.manualSubjectSelect.appendChild(oldOpt);
+              el.manualSubjectSelect.value = target.subjectId;
+            }
+            el.manualDateInput.value = target.date;
+            el.manualMinutesInput.value = String(Math.max(1, Math.round(target.durationSeconds / 60)));
+            el.manualMemoInput.value = target.memo || '';
+            uiState.manualFocus = target.focus || 4;
+          } else {
+            el.manualModalTitle.textContent = '공부 기록 직접 추가';
+            if (state.selectedSubjectId) el.manualSubjectSelect.value = state.selectedSubjectId;
+            el.manualDateInput.value = toLocalDateStr(Date.now());
+            el.manualMinutesInput.value = '30';
+            el.manualMemoInput.value = '';
+            uiState.manualFocus = 4;
+          }
+
+          updateManualFocusButtons();
+          el.manualModalBackdrop.classList.add('is-open');
+        }
+
+        function updateManualFocusButtons() {
+          var btns = el.manualFocusGrid.querySelectorAll('.focus-score-btn');
+          for (var i = 0; i < btns.length; i++) {
+            var val = Number(btns[i].getAttribute('data-score'));
+            btns[i].classList.toggle('is-selected', val === uiState.manualFocus);
+          }
+        }
+
+        function saveManualOrEditedRecord() {
+          var subjId = el.manualSubjectSelect.value;
+          var subj = findSubjectById(subjId);
+          var dateStr = el.manualDateInput.value || toLocalDateStr(Date.now());
+          var mins = parseInt(el.manualMinutesInput.value, 10);
+          if (!Number.isFinite(mins) || mins < 1) {
+            showToast('공부 시간은 1분 이상 입력해 주세요.');
+            return;
+          }
+          if (mins > 720) mins = 720;
+          var durSec = mins * 60;
+          var memoText = el.manualMemoInput.value.trim().slice(0, 40);
+
+          if (uiState.editingRecordId) {
+            for (var i = 0; i < state.records.length; i++) {
+              if (state.records[i].id === uiState.editingRecordId) {
+                var r = state.records[i];
+                if (subj) {
+                  r.subjectId = subj.id;
+                  r.subjectName = subj.name;
+                  r.subjectColor = subj.color;
+                }
+                r.date = dateStr;
+                r.durationSeconds = durSec;
+                r.focus = uiState.manualFocus;
+                r.memo = memoText;
+                break;
+              }
+            }
+            showToast('공부 기록을 수정했어요.');
+          } else {
+            if (!subj) return;
+            var now = Date.now();
+            state.records.unshift({
+              id: generateId('rec'),
+              subjectId: subj.id,
+              subjectName: subj.name,
+              subjectColor: subj.color,
+              date: dateStr,
+              startedAt: now - durSec * 1000,
+              endedAt: now,
+              durationSeconds: durSec,
+              focus: uiState.manualFocus,
+              memo: memoText
+            });
+            uiState.selectedMusicScore = uiState.manualFocus;
+            showToast(subj.name + ' ' + formatDurationKo(durSec) + ' 기록을 추가했어요.');
+          }
+
+          saveState();
+          el.manualModalBackdrop.classList.remove('is-open');
+          renderAll();
+        }
+
+        function deleteRecord(recordId) {
+          var target = null;
+          for (var i = 0; i < state.records.length; i++) {
+            if (state.records[i].id === recordId) { target = state.records[i]; break; }
+          }
+          if (!target) return;
+
+          openConfirmModal(
+            '이 공부 기록을 삭제할까요?',
+            target.date + ' · ' + target.subjectName + ' · ' + formatDurationKo(target.durationSeconds) + ' 기록이 삭제됩니다.',
+            function () {
+              state.records = state.records.filter(function (r) { return r.id !== recordId; });
+              saveState();
+              renderAll();
+              showToast('공부 기록을 삭제했어요.');
+            }
+          );
+        }
+
+        function openExamModal() {
+          el.examTitleInput.value = '';
+          var defaultDate = new Date();
+          defaultDate.setDate(defaultDate.getDate() + 14);
+          el.examDateInput.value = toLocalDateStr(defaultDate);
+          el.examModalBackdrop.classList.add('is-open');
+          el.examTitleInput.focus();
+        }
+
+        function deleteExamGoal(id) {
+          state.examGoals = state.examGoals.filter(function (g) { return g.id !== id; });
+          saveState();
+          renderAll();
+          showToast('일정을 삭제했어요.');
+        }
+
+        function downloadStandaloneHtml() {
+          try {
+            var htmlSource = pristineHtmlSnapshot;
+            if (!htmlSource && document.documentElement && document.documentElement.outerHTML) {
+              htmlSource = '<!doctype html>\n' + document.documentElement.outerHTML;
+            }
+            if (!htmlSource) {
+              showToast('HTML 파일을 생성하지 못했어요.');
+              return;
+            }
+            var blob = new Blob([htmlSource], { type: 'text/html;charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'index.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('단일 index.html 파일을 다운로드했어요.');
+          } catch (e) {
+            showToast('index.html 다운로드에 실패했어요.');
+          }
+        }
+
+        function exportBackupJson() {
+          try {
+            var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'studylog-backup-' + toLocalDateStr(Date.now()) + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('백업 파일(JSON)을 저장했어요.');
+          } catch (e) {
+            showToast('파일 내보내기에 실패했어요.');
+          }
+        }
+
+        function exportRecordsCsv() {
+          if (state.records.length === 0) {
+            showToast('내보낼 공부 기록이 아직 없어요.');
+            return;
+          }
+          try {
+            var rows = [['날짜', '과목', '공부시간(분)', '시작시각', '종료시각', '집중도(1~5)', '메모']];
+            state.records.forEach(function (r) {
+              var info = resolveRecordSubject(r);
+              var mins = (r.durationSeconds / 60).toFixed(1);
+              var memoSafe = '"' + String(r.memo || '').replace(/"/g, '""') + '"';
+              rows.push([
+                r.date,
+                '"' + info.name.replace(/"/g, '""') + '"',
+                mins,
+                formatTimeHHMM(r.startedAt),
+                formatTimeHHMM(r.endedAt),
+                r.focus || '',
+                memoSafe
+              ]);
+            });
+            var csvContent = '\uFEFF' + rows.map(function (row) { return row.join(','); }).join('\n');
+            var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'studylog-records-' + toLocalDateStr(Date.now()) + '.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('CSV 파일을 저장했어요.');
+          } catch (e) {
+            showToast('CSV 내보내기에 실패했어요.');
+          }
+        }
+
+        function handleImportJsonFile(file) {
+          if (!file) return;
+          var reader = new FileReader();
+          reader.onload = function () {
+            try {
+              state = sanitizeLoadedState(JSON.parse(String(reader.result)));
+              saveState();
+              ensureTimerLoop();
+              renderAll();
+              showToast('백업 데이터를 성공적으로 복원했어요.');
+            } catch (e) {
+              showToast('올바른 StudyLog 백업 파일이 아닙니다.');
+            }
+          };
+          reader.readAsText(file);
+        }
+
+        // =========================================================================
+        // 8. 통계 계산 헬퍼
+        // =========================================================================
+        function resolveRecordSubject(record) {
+          var currentSub = findSubjectById(record.subjectId);
+          return {
+            key: currentSub ? currentSub.id : 'deleted_' + record.subjectName,
+            name: currentSub ? currentSub.name : record.subjectName,
+            color: currentSub ? currentSub.color : record.subjectColor
+          };
+        }
+
+        function aggregateBySubject(records) {
+          var map = {};
+          var order = [];
+          state.subjects.forEach(function (s) {
+            map[s.id] = { key: s.id, name: s.name, color: s.color, seconds: 0 };
+            order.push(s.id);
+          });
+          records.forEach(function (r) {
+            var info = resolveRecordSubject(r);
+            if (!map[info.key]) {
+              map[info.key] = { key: info.key, name: info.name, color: info.color, seconds: 0 };
+              order.push(info.key);
+            }
+            map[info.key].seconds += r.durationSeconds;
+          });
+          return order.map(function (k) { return map[k]; }).filter(function (x) { return x.seconds > 0; });
+        }
+
+        function getRecordsByPeriod(period) {
+          var today = toLocalDateStr(Date.now());
+          if (period === 'today') {
+            return state.records.filter(function (r) { return r.date === today; });
+          }
+          if (period === 'week') {
+            var weekSet = {};
+            getCurrentWeekDates().forEach(function (d) { weekSet[d.dateStr] = true; });
+            return state.records.filter(function (r) { return Boolean(weekSet[r.date]); });
+          }
+          if (period === 'month') {
+            var monthSet = {};
+            getLastNDates(30).forEach(function (d) { monthSet[d] = true; });
+            return state.records.filter(function (r) { return Boolean(monthSet[r.date]); });
+          }
+          return state.records.slice();
+        }
+
+        function renderRatioBarInto(subjectTotals, totalSec, container) {
+          container.innerHTML = '';
+          if (totalSec <= 0 || subjectTotals.length === 0) return;
+
+          var track = document.createElement('div');
+          track.className = 'ratio-bar-track';
+
+          var legend = document.createElement('div');
+          legend.className = 'ratio-legend tabular';
+
+          subjectTotals.forEach(function (item) {
+            var pct = (item.seconds / totalSec) * 100;
+            var seg = document.createElement('div');
+            seg.className = 'ratio-bar-seg';
+            seg.style.width = pct.toFixed(2) + '%';
+            seg.style.backgroundColor = item.color;
+            track.appendChild(seg);
+
+            var legItem = document.createElement('span');
+            legItem.textContent = item.name + ' ' + Math.round(pct) + '%';
+            legend.appendChild(legItem);
+          });
+
+          container.appendChild(track);
+          container.appendChild(legend);
+        }
+
+        // =========================================================================
+        // 9. 페이지별 렌더링 함수들
+        // =========================================================================
+        function renderTimerSection() {
+          var isRunning = Boolean(state.activeSession);
+          var isPaused = Boolean(state.activeSession && state.activeSession.isPaused);
+          var pausedByLeave = Boolean(isPaused && state.activeSession.pausedReason === 'leave');
+          var hasSubjects = state.subjects.length > 0;
+          var activeSubj = isRunning ? findSubjectById(state.activeSession.subjectId) : findSubjectById(state.selectedSubjectId);
+
+          el.timerSection.classList.toggle('is-running', isRunning && !isPaused);
+          el.timerSection.classList.toggle('is-paused', isPaused);
+
+          el.leaveGuardToggleBtn.classList.toggle('is-on', state.autoPauseOnLeave);
+          el.leaveGuardToggleBtn.setAttribute('aria-checked', state.autoPauseOnLeave ? 'true' : 'false');
+          el.leaveGuardDesc.textContent = state.autoPauseOnLeave
+            ? '다른 앱·탭 이동 또는 이탈 시 시간 멈춤'
+            : '꺼짐 · 화면을 끄거나 나가도 계속 측정됨';
+
+          if (pausedByLeave) {
+            var cnt = state.activeSession.leavePauseCount || 1;
+            el.leaveAlertBox.classList.add('is-visible');
+            el.leaveAlertBox.innerHTML =
+              '<strong>화면 이탈 감지로 시간이 멈췄어요</strong> (이번 세션 ' +
+              cnt +
+              '회) — 다시 공부하려면 아래 "이어서 측정하기"를 눌러주세요.';
+          } else {
+            el.leaveAlertBox.classList.remove('is-visible');
+            el.leaveAlertBox.innerHTML = '';
+          }
+
+          if (isRunning && activeSubj) {
+            el.timerSubjectDot.style.backgroundColor = activeSubj.color;
+            el.timerSubjectDot.style.display = 'inline-block';
+            el.timerSubjectText.textContent = pausedByLeave
+              ? activeSubj.name + ' 이탈로 정지됨'
+              : isPaused
+                ? activeSubj.name + ' 일시정지됨'
+                : activeSubj.name + ' 공부 측정 중';
+            el.timerStartedAtText.textContent = pausedByLeave
+              ? '이탈 감지'
+              : isPaused
+                ? '휴식 중'
+                : formatTimeHHMM(state.activeSession.startedAt) + ' 시작';
+          } else if (hasSubjects && activeSubj) {
+            el.timerSubjectDot.style.backgroundColor = activeSubj.color;
+            el.timerSubjectDot.style.display = 'inline-block';
+            el.timerSubjectText.textContent = activeSubj.name + ' 선택됨';
+            el.timerStartedAtText.textContent = '대기 중';
+          } else {
+            el.timerSubjectDot.style.display = 'none';
+            el.timerSubjectText.textContent = '등록된 과목 없음';
+            el.timerStartedAtText.textContent = '';
+          }
+
+          el.subjectSelectGrid.innerHTML = '';
+          if (!hasSubjects) {
+            var noSubMsg = document.createElement('p');
+            noSubMsg.style.margin = '0';
+            noSubMsg.style.fontSize = '0.875rem';
+            noSubMsg.style.color = 'var(--text-muted)';
+            noSubMsg.innerHTML = '등록된 과목이 없습니다. <a href="#/manage" style="color: var(--accent-idle); font-weight: 600;">과목 추가하러 가기</a>';
+            el.subjectSelectGrid.appendChild(noSubMsg);
+          } else {
+            state.subjects.forEach(function (s) {
+              var btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = 'subject-btn';
+              var isSelected = activeSubj && activeSubj.id === s.id;
+              if (isSelected) btn.classList.add('is-selected');
+              btn.style.setProperty('--subject-color', s.color);
+              btn.disabled = isRunning;
+              btn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+
+              var dot = document.createElement('span');
+              dot.className = 'subject-dot';
+              dot.style.backgroundColor = s.color;
+              dot.setAttribute('aria-hidden', 'true');
+
+              var nameSpan = document.createElement('span');
+              nameSpan.className = 'subject-btn-name';
+              nameSpan.textContent = s.name;
+
+              btn.appendChild(dot);
+              btn.appendChild(nameSpan);
+              btn.addEventListener('click', function () {
+                if (state.activeSession) return;
+                state.selectedSubjectId = s.id;
+                saveState();
+                renderTimerSection();
+              });
+              el.subjectSelectGrid.appendChild(btn);
+            });
+          }
+
+          el.primaryTimerBtn.classList.toggle('is-running', isRunning);
+          el.primaryTimerBtn.disabled = !hasSubjects && !isRunning;
+          el.pauseResumeBtn.classList.toggle('is-visible', isRunning);
+          el.pauseResumeBtn.classList.toggle('is-paused', isPaused);
+          el.pauseResumeBtn.textContent = isPaused ? '이어서 측정하기' : '잠깐 일시정지';
+
+          if (isRunning) {
+            el.primaryTimerBtn.textContent = '공부 정지 · 기록하기';
+            el.timerHint.textContent = state.autoPauseOnLeave
+              ? '다른 앱·탭으로 이동하거나 화면을 끄면 공부 시간이 자동으로 멈춥니다.'
+              : '화면을 끄거나 새로고침해도 측정이 이어집니다.';
+          } else if (hasSubjects) {
+            el.primaryTimerBtn.textContent = '공부 시작';
+            el.timerHint.textContent = uiState.guideMinutes > 0 ? uiState.guideMinutes + '분 달성 시 알림을 띄워드려요.' : '과목을 고르고 시작을 누르면 시간이 바로 기록돼요.';
+          } else {
+            el.primaryTimerBtn.textContent = '과목을 먼저 추가하세요';
+            el.timerHint.textContent = '최소 1개 이상의 과목이 있어야 측정을 시작할 수 있어요.';
+          }
+
+          updateTimerDisplay();
+        }
+
+        function renderHomeSummary() {
+          // 가장 임박한 시험 D-Day 표시
+          var upcoming = state.examGoals.slice().sort(function (a, b) {
+            return a.date.localeCompare(b.date);
+          }).filter(function (g) {
+            var diff = diffDaysFromToday(g.date);
+            return diff !== null && diff >= 0;
+          });
+          if (upcoming.length > 0) {
+            var d = diffDaysFromToday(upcoming[0].date);
+            el.homeDdayTag.textContent = upcoming[0].title + ' · ' + (d === 0 ? 'D-Day' : 'D-' + d);
+          } else {
+            el.homeDdayTag.textContent = toLocalDateStr(Date.now());
+          }
+
+          var todayRecs = getRecordsByPeriod('today');
+          var weekRecs = getRecordsByPeriod('week');
+          var todaySec = todayRecs.reduce(function (a, r) { return a + r.durationSeconds; }, 0);
+          var weekSec = weekRecs.reduce(function (a, r) { return a + r.durationSeconds; }, 0);
+
+          el.homeTodayTotal.textContent = formatDurationKo(todaySec);
+          el.homeWeekTotal.textContent = formatDurationKo(weekSec);
+
+          var latestRated = null;
+          for (var i = 0; i < state.records.length; i++) {
+            if (state.records[i].focus >= 1 && state.records[i].focus <= 5) {
+              latestRated = state.records[i];
+              break;
+            }
+          }
+          el.homeLatestFocus.textContent = latestRated ? latestRated.focus + ' / 5점' : '-';
+
+          var todaySubs = aggregateBySubject(todayRecs);
+          renderRatioBarInto(todaySubs, todaySec, el.homeTodayRatioWrap);
+
+          el.homeRecentRecordsList.innerHTML = '';
+          if (todayRecs.length === 0) {
+            var empty = document.createElement('li');
+            empty.className = 'empty-state';
+            empty.innerHTML = '<strong>오늘 저장된 공부 기록이 없어요</strong>타이머를 시작하거나 "+ 직접 추가"로 첫 기록을 남겨보세요.';
+            el.homeRecentRecordsList.appendChild(empty);
+          } else {
+            todayRecs.slice(0, 4).forEach(function (r) {
+              el.homeRecentRecordsList.appendChild(createRecordListItem(r, false));
+            });
+          }
+
+          renderMusicPanelInto(uiState.selectedMusicScore, el.homeMusicBody);
+        }
+
+        function createRecordListItem(r, showEditBtn) {
+          var info = resolveRecordSubject(r);
+          var li = document.createElement('li');
+          li.className = 'record-item';
+
+          var main = document.createElement('div');
+          main.className = 'record-main';
+
+          var dot = document.createElement('span');
+          dot.className = 'subject-dot';
+          dot.style.backgroundColor = info.color;
+          dot.setAttribute('aria-hidden', 'true');
+
+          var infoBox = document.createElement('div');
+          infoBox.className = 'record-info';
+
+          var subjEl = document.createElement('div');
+          subjEl.className = 'record-subject';
+          subjEl.textContent = info.name;
+
+          var metaEl = document.createElement('div');
+          metaEl.className = 'record-meta tabular';
+          var timeRange = formatTimeHHMM(r.startedAt) + '–' + formatTimeHHMM(r.endedAt);
+          var focusText = r.focus ? ' · 집중도 ' + r.focus + '/5점' : '';
+          metaEl.textContent = timeRange + focusText;
+
+          infoBox.appendChild(subjEl);
+          infoBox.appendChild(metaEl);
+
+          if (r.memo) {
+            var memoEl = document.createElement('div');
+            memoEl.className = 'record-memo';
+            memoEl.textContent = r.memo;
+            infoBox.appendChild(memoEl);
+          }
+
+          main.appendChild(dot);
+          main.appendChild(infoBox);
+
+          var actions = document.createElement('div');
+          actions.className = 'record-actions';
+
+          var durEl = document.createElement('span');
+          durEl.className = 'record-duration tabular';
+          durEl.textContent = formatDurationKo(r.durationSeconds);
+          actions.appendChild(durEl);
+
+          if (showEditBtn) {
+            var editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.className = 'btn-icon-muted';
+            editBtn.textContent = '수정';
+            editBtn.addEventListener('click', function () { openManualRecordModal(r.id); });
+            actions.appendChild(editBtn);
+          }
+
+          var delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.className = 'btn-icon-danger';
+          delBtn.textContent = '삭제';
+          delBtn.addEventListener('click', function () { deleteRecord(r.id); });
+          actions.appendChild(delBtn);
+
+          li.appendChild(main);
+          li.appendChild(actions);
+          return li;
+        }
+
+        // PAGE 2: 심층 분석 렌더링
+        function renderAnalyticsPage() {
+          var period = uiState.analyticsPeriod;
+          var tabBtns = el.analyticsPeriodTabs.querySelectorAll('.segmented-tab');
+          for (var i = 0; i < tabBtns.length; i++) {
+            tabBtns[i].classList.toggle('is-active', tabBtns[i].getAttribute('data-period') === period);
+          }
+
+          var recs = getRecordsByPeriod(period);
+          var totalSec = recs.reduce(function (a, r) { return a + r.durationSeconds; }, 0);
+          var bySubject = aggregateBySubject(recs);
+
+          var uniqueDaysMap = {};
+          recs.forEach(function (r) { uniqueDaysMap[r.date] = true; });
+          var activeDays = Object.keys(uniqueDaysMap).length;
+          var dailyAvgSec = activeDays > 0 ? Math.round(totalSec / activeDays) : 0;
+
+          el.anTotalTime.textContent = formatDurationKo(totalSec);
+          el.anSessionCount.textContent = recs.length + '회 측정';
+          el.anDailyAvg.textContent = formatDurationKo(dailyAvgSec);
+          el.anActiveDays.textContent = '공부한 날 ' + activeDays + '일';
+
+          if (bySubject.length > 0 && totalSec > 0) {
+            var topSub = bySubject.slice().sort(function (a, b) { return b.seconds - a.seconds; })[0];
+            el.anTopSubject.textContent = topSub.name;
+            el.anTopShare.textContent = '비중 ' + Math.round((topSub.seconds / totalSec) * 100) + '%';
+          } else {
+            el.anTopSubject.textContent = '-';
+            el.anTopShare.textContent = '비중 0%';
+          }
+
+          var periodNames = { today: '오늘 기준', week: '이번 주(월~일) 기준', month: '최근 30일 기준', all: '전체 누적 기준' };
+          el.anChartCaption.textContent = periodNames[period];
+          el.anFocusMeta.textContent = periodNames[period];
+
+          renderRatioBarInto(bySubject, totalSec, el.anRatioBarWrap);
+
+          el.anChartContainer.innerHTML = '';
+          el.anSubjectTotals.innerHTML = '';
+
+          if (period === 'week') {
+            el.anChartTitle.textContent = '이번 주 요일별 · 과목별 막대그래프';
+            renderWeekStackedBarChart(recs, el.anChartContainer);
+          } else if (period === 'month') {
+            el.anChartTitle.textContent = '최근 14일 일별 추이 & 과목별 합계';
+            renderRecent14DaysChart(recs, el.anChartContainer);
+          } else {
+            el.anChartTitle.textContent = '과목별 공부 시간 막대그래프';
+            renderSubjectBarChart(bySubject, el.anChartContainer);
+          }
+
+          bySubject.forEach(function (item) {
+            var li = document.createElement('li');
+            li.className = 'totals-item';
+            li.innerHTML =
+              '<div class="totals-item-left"><span class="subject-dot" style="background:' + item.color + '"></span>' +
+              '<span class="totals-item-name"></span></div>' +
+              '<span class="totals-item-time tabular">' + formatDurationKo(item.seconds) + '</span>';
+            li.querySelector('.totals-item-name').textContent = item.name;
+            el.anSubjectTotals.appendChild(li);
+          });
+
+          // 시간대별 학습 효율 분석 (오전 / 오후 / 저녁 / 심야)
+          var bands = [
+            { id: 'morning', label: '새벽·오전 (05~12시)', minH: 5, maxH: 12, sec: 0, focusSum: 0, focusCnt: 0 },
+            { id: 'afternoon', label: '오후 (12~18시)', minH: 12, maxH: 18, sec: 0, focusSum: 0, focusCnt: 0 },
+            { id: 'evening', label: '저녁 (18~22시)', minH: 18, maxH: 22, sec: 0, focusSum: 0, focusCnt: 0 },
+            { id: 'night', label: '심야 (22~05시)', minH: 22, maxH: 5, sec: 0, focusSum: 0, focusCnt: 0 }
+          ];
+
+          recs.forEach(function (r) {
+            var h = new Date(r.startedAt).getHours();
+            var targetBand = bands[3];
+            if (h >= 5 && h < 12) targetBand = bands[0];
+            else if (h >= 12 && h < 18) targetBand = bands[1];
+            else if (h >= 18 && h < 22) targetBand = bands[2];
+
+            targetBand.sec += r.durationSeconds;
+            if (r.focus >= 1 && r.focus <= 5) {
+              targetBand.focusSum += r.focus;
+              targetBand.focusCnt += 1;
+            }
+          });
+
+          el.anTimebandBody.innerHTML = '';
+          if (recs.length === 0) {
+            el.anTimebandBody.innerHTML = '<div class="empty-state"><strong>시간대별 데이터가 없어요</strong>공부 기록이 쌓이면 어느 시간대에 가장 몰입하는지 분석해 드려요.</div>';
+            el.anAvgFocus.textContent = '-';
+            el.anBestBand.textContent = '최고 집중 시간대 -';
+          } else {
+            var maxBandSec = Math.max.apply(null, bands.map(function (b) { return b.sec; })) || 1;
+            var bestBand = bands.slice().sort(function (a, b) {
+              var avgA = a.focusCnt ? a.focusSum / a.focusCnt : 0;
+              var avgB = b.focusCnt ? b.focusSum / b.focusCnt : 0;
+              return avgB !== avgA ? avgB - avgA : b.sec - a.sec;
+            })[0];
+
+            var list = document.createElement('ul');
+            list.className = 'timeband-list';
+            bands.forEach(function (b) {
+              var li = document.createElement('li');
+              var avgStr = b.focusCnt > 0 ? ' · 평균 ' + (b.focusSum / b.focusCnt).toFixed(1) + '점' : '';
+              var pct = Math.round((b.sec / maxBandSec) * 100);
+              li.innerHTML =
+                '<div class="timeband-head"><span class="timeband-name">' + b.label + '</span>' +
+                '<span class="timeband-stat tabular">' + formatDurationKo(b.sec) + avgStr + '</span></div>' +
+                '<div class="progress-track"><div class="progress-bar" style="width:' + pct + '%; background:var(--accent-idle);"></div></div>';
+              list.appendChild(li);
+            });
+            el.anTimebandBody.appendChild(list);
+
+            var rated = recs.filter(function (r) { return r.focus >= 1 && r.focus <= 5; });
+            if (rated.length > 0) {
+              var sumF = rated.reduce(function (a, r) { return a + r.focus; }, 0);
+              el.anAvgFocus.textContent = (sumF / rated.length).toFixed(1) + ' / 5.0점';
+            } else {
+              el.anAvgFocus.textContent = '-';
+            }
+            el.anBestBand.textContent = bestBand.sec > 0 ? '주력: ' + bestBand.label.split(' ')[0] : '최고 집중 시간대 -';
+          }
+
+          renderFocusStatsInto(recs, el.anFocusBody);
+        }
+
+        function renderSubjectBarChart(subjectTotals, container) {
+          if (subjectTotals.length === 0) {
+            container.innerHTML = '<div class="empty-state"><strong>아직 그래프에 표시할 기록이 없어요</strong>공부를 기록하면 과목별 비교 막대가 나타납니다.</div>';
+            return;
+          }
+          var maxSec = Math.max.apply(null, subjectTotals.map(function (x) { return x.seconds; })) || 1;
+          var grid = document.createElement('div');
+          grid.className = 'bar-chart-grid';
+          var labelsRow = document.createElement('div');
+          labelsRow.className = 'bar-labels-row';
+
+          subjectTotals.forEach(function (item) {
+            var col = document.createElement('div');
+            col.className = 'bar-col';
+            col.innerHTML =
+              '<span class="bar-value-label tabular">' + formatDurationShort(item.seconds) + '</span>' +
+              '<div class="bar-track"><div class="bar-fill" style="height:' + Math.max(6, Math.round((item.seconds / maxSec) * 100)) + '%; background:' + item.color + ';"></div></div>';
+            grid.appendChild(col);
+
+            var lbl = document.createElement('div');
+            lbl.className = 'bar-axis-label';
+            lbl.textContent = item.name;
+            labelsRow.appendChild(lbl);
+          });
+          container.appendChild(grid);
+          container.appendChild(labelsRow);
+        }
+
+        function renderRecent14DaysChart(recs, container) {
+          var dates14 = getLastNDates(14);
+          var todayStr = toLocalDateStr(Date.now());
+          var byDay = dates14.map(function (d) {
+            var dayRecs = recs.filter(function (r) { return r.date === d; });
+            var segs = aggregateBySubject(dayRecs);
+            var total = segs.reduce(function (a, s) { return a + s.seconds; }, 0);
+            return { dateStr: d, dayLabel: d.slice(8), total: total, segments: segs };
+          });
+          var maxSec = Math.max.apply(null, byDay.map(function (x) { return x.total; })) || 0;
+          if (maxSec === 0) {
+            container.innerHTML = '<div class="empty-state"><strong>최근 30일 기록이 없어요</strong>꾸준히 기록하면 일별 추이 막대가 나타납니다.</div>';
+            return;
+          }
+
+          var grid = document.createElement('div');
+          grid.className = 'bar-chart-grid is-dense';
+          var labelsRow = document.createElement('div');
+          labelsRow.className = 'bar-labels-row is-dense';
+
+          byDay.forEach(function (d) {
+            var col = document.createElement('div');
+            col.className = 'bar-col';
+            var val = document.createElement('span');
+            val.className = 'bar-value-label tabular';
+            val.textContent = formatDurationShort(d.total);
+            var track = document.createElement('div');
+            track.className = 'bar-track';
+            d.segments.forEach(function (seg) {
+              var segDiv = document.createElement('div');
+              segDiv.className = 'bar-stack-seg';
+              segDiv.style.height = Math.max(3, (seg.seconds / maxSec) * 100) + '%';
+              segDiv.style.backgroundColor = seg.color;
+              track.appendChild(segDiv);
+            });
+            col.appendChild(val);
+            col.appendChild(track);
+            grid.appendChild(col);
+
+            var lbl = document.createElement('div');
+            lbl.className = 'bar-axis-label tabular' + (d.dateStr === todayStr ? ' is-today' : '');
+            lbl.textContent = d.dayLabel;
+            labelsRow.appendChild(lbl);
+          });
+
+          container.appendChild(grid);
+          container.appendChild(labelsRow);
+        }
+
+        function renderWeekStackedBarChart(weekRecords, container) {
+          var weekDates = getCurrentWeekDates();
+          var todayStr = toLocalDateStr(Date.now());
+          if (!uiState.selectedWeekDate) uiState.selectedWeekDate = todayStr;
+
+          var dayDataMap = {};
+          var maxDaySec = 0;
+          weekDates.forEach(function (wd) {
+            var dayRecs = weekRecords.filter(function (r) { return r.date === wd.dateStr; });
+            var bySub = aggregateBySubject(dayRecs);
+            var total = bySub.reduce(function (sum, item) { return sum + item.seconds; }, 0);
+            if (total > maxDaySec) maxDaySec = total;
+            dayDataMap[wd.dateStr] = { total: total, segments: bySub, info: wd };
+          });
+
+          if (weekRecords.length === 0) {
+            container.innerHTML = '<div class="empty-state"><strong>이번 주 공부 기록이 아직 없어요</strong>오늘부터 기록하면 요일별 과목 밸런스가 나타납니다.</div>';
+            return;
+          }
+          if (maxDaySec <= 0) maxDaySec = 1;
+
+          var grid = document.createElement('div');
+          grid.className = 'bar-chart-grid';
+          var labelsRow = document.createElement('div');
+          labelsRow.className = 'bar-labels-row';
+
+          weekDates.forEach(function (wd) {
+            var data = dayDataMap[wd.dateStr];
+            var col = document.createElement('div');
+            col.className = 'bar-col';
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'bar-col-btn' + (uiState.selectedWeekDate === wd.dateStr ? ' is-active' : '');
+
+            var valLabel = document.createElement('span');
+            valLabel.className = 'bar-value-label tabular';
+            valLabel.textContent = formatDurationShort(data.total);
+            var track = document.createElement('div');
+            track.className = 'bar-track';
+
+            data.segments.forEach(function (seg) {
+              var segDiv = document.createElement('div');
+              segDiv.className = 'bar-stack-seg';
+              segDiv.style.height = Math.max(3, (seg.seconds / maxDaySec) * 100) + '%';
+              segDiv.style.backgroundColor = seg.color;
+              track.appendChild(segDiv);
+            });
+
+            btn.appendChild(valLabel);
+            btn.appendChild(track);
+            btn.addEventListener('click', function () {
+              uiState.selectedWeekDate = wd.dateStr;
+              renderAnalyticsPage();
+            });
+            col.appendChild(btn);
+            grid.appendChild(col);
+
+            var axisLabel = document.createElement('div');
+            axisLabel.className = 'bar-axis-label' + (wd.dateStr === todayStr ? ' is-today' : '');
+            axisLabel.textContent = wd.weekday;
+            labelsRow.appendChild(axisLabel);
+          });
+
+          container.appendChild(grid);
+          container.appendChild(labelsRow);
+
+          var selectedDay = dayDataMap[uiState.selectedWeekDate] || dayDataMap[todayStr];
+          if (selectedDay) {
+            var inspector = document.createElement('div');
+            inspector.className = 'day-inspector tabular';
+            var prefix = selectedDay.info.weekday + '요일(' + selectedDay.info.dayNum + '일)';
+            if (selectedDay.segments.length === 0) {
+              inspector.textContent = prefix + '에는 아직 기록이 없어요.';
+            } else {
+              var strong = document.createElement('strong');
+              strong.textContent = prefix + ' 합계 ' + formatDurationKo(selectedDay.total);
+              inspector.appendChild(strong);
+              selectedDay.segments.forEach(function (seg) {
+                var span = document.createElement('span');
+                span.style.display = 'inline-flex';
+                span.style.alignItems = 'center';
+                span.style.gap = '5px';
+                var dot = document.createElement('span');
+                dot.className = 'subject-dot';
+                dot.style.backgroundColor = seg.color;
+                span.appendChild(dot);
+                span.appendChild(document.createTextNode(seg.name + ' ' + formatDurationKo(seg.seconds)));
+                inspector.appendChild(span);
+              });
+            }
+            container.appendChild(inspector);
+          }
+        }
+
+        function renderFocusStatsInto(recs, container) {
+          container.innerHTML = '';
+          var rated = recs.filter(function (r) { return r.focus !== null && r.focus >= 1 && r.focus <= 5; });
+          if (rated.length === 0) {
+            container.innerHTML = '<div class="empty-state"><strong>집중도 평가 기록이 없어요</strong>정지 시 1~5점을 선택하면 점수별·과목별 집중 통계를 볼 수 있어요.</div>';
+            return;
+          }
+
+          var buckets = { 1: { count: 0, sec: 0 }, 2: { count: 0, sec: 0 }, 3: { count: 0, sec: 0 }, 4: { count: 0, sec: 0 }, 5: { count: 0, sec: 0 } };
+          var bySub = {};
+          rated.forEach(function (r) {
+            buckets[r.focus].count += 1;
+            buckets[r.focus].sec += r.durationSeconds;
+            var info = resolveRecordSubject(r);
+            if (!bySub[info.key]) bySub[info.key] = { name: info.name, color: info.color, sum: 0, count: 0 };
+            bySub[info.key].sum += r.focus;
+            bySub[info.key].count += 1;
+          });
+
+          var distList = document.createElement('ul');
+          distList.className = 'focus-dist-list';
+          for (var s = 5; s >= 1; s--) {
+            var b = buckets[s];
+            var ratio = Math.round((b.count / rated.length) * 100);
+            var avgDur = b.count > 0 ? formatDurationKo(Math.round(b.sec / b.count)) : '-';
+            var row = document.createElement('li');
+            row.className = 'focus-dist-row tabular';
+            row.innerHTML =
+              '<span class="focus-dist-label">' + s + '점</span>' +
+              '<div class="focus-dist-track"><div class="focus-dist-fill" style="width:' + ratio + '%"></div></div>' +
+              '<span class="focus-dist-stat">' + b.count + '회 · 평균 ' + avgDur + '</span>';
+            distList.appendChild(row);
+          }
+          container.appendChild(distList);
+
+          var subEntries = Object.keys(bySub).map(function (k) {
+            return { name: bySub[k].name, color: bySub[k].color, avg: bySub[k].sum / bySub[k].count, count: bySub[k].count };
+          }).sort(function (a, b) { return b.avg - a.avg; });
+
+          if (subEntries.length > 0) {
+            var subTitle = document.createElement('div');
+            subTitle.className = 'focus-sub-heading';
+            subTitle.textContent = '과목별 평균 집중도';
+            container.appendChild(subTitle);
+
+            var subList = document.createElement('ul');
+            subList.className = 'focus-dist-list';
+            subEntries.forEach(function (item) {
+              var row = document.createElement('li');
+              row.className = 'focus-dist-row tabular';
+              var lbl = document.createElement('span');
+              lbl.className = 'focus-dist-label';
+              lbl.innerHTML = '<span class="subject-dot" style="background:' + item.color + '"></span>';
+              lbl.appendChild(document.createTextNode(item.name));
+              var trk = document.createElement('div');
+              trk.className = 'focus-dist-track';
+              trk.innerHTML = '<div class="focus-dist-fill" style="width:' + Math.round((item.avg / 5) * 100) + '%; background:' + item.color + '"></div>';
+              var st = document.createElement('span');
+              st.className = 'focus-dist-stat';
+              st.textContent = item.avg.toFixed(1) + '점 (' + item.count + '회)';
+              row.appendChild(lbl);
+              row.appendChild(trk);
+              row.appendChild(st);
+              subList.appendChild(row);
+            });
+            container.appendChild(subList);
+          }
+        }
+
+        // PAGE 3: 전체 기록 렌더링 (검색·필터·날짜 그룹핑)
+        function renderRecordsPage() {
+          var prevSubVal = el.recSubjectFilter.value || 'all';
+          el.recSubjectFilter.innerHTML = '<option value="all">전체 과목</option>';
+          state.subjects.forEach(function (s) {
+            var opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = s.name;
+            el.recSubjectFilter.appendChild(opt);
+          });
+          if (prevSubVal !== 'all' && findSubjectById(prevSubVal)) {
+            el.recSubjectFilter.value = prevSubVal;
+          } else {
+            el.recSubjectFilter.value = 'all';
+          }
+
+          var subFilter = el.recSubjectFilter.value;
+          var periodFilter = el.recPeriodFilter.value;
+          var focusFilter = el.recFocusFilter.value;
+          var query = el.recSearchInput.value.trim().toLowerCase();
+
+          var list = getRecordsByPeriod(periodFilter).filter(function (r) {
+            if (subFilter !== 'all' && r.subjectId !== subFilter) return false;
+            if (focusFilter === 'high' && !(r.focus >= 4)) return false;
+            if (focusFilter === 'mid' && r.focus !== 3) return false;
+            if (focusFilter === 'low' && !(r.focus >= 1 && r.focus <= 2)) return false;
+            if (focusFilter === 'none' && r.focus !== null) return false;
+            if (query) {
+              var info = resolveRecordSubject(r);
+              var hay = (info.name + ' ' + (r.memo || '')).toLowerCase();
+              if (hay.indexOf(query) === -1) return false;
+            }
+            return true;
+          });
+
+          var sumSec = list.reduce(function (a, r) { return a + r.durationSeconds; }, 0);
+          el.recFilterSummary.textContent = list.length + '건 · 합계 ' + formatDurationKo(sumSec);
+
+          el.recGroupedContainer.innerHTML = '';
+          if (list.length === 0) {
+            el.recGroupedContainer.innerHTML = '<div class="empty-state"><strong>조건에 맞는 공부 기록이 없어요</strong>필터를 초기화하거나 새로운 공부 시간을 기록해 보세요.</div>';
+            return;
+          }
+
+          // 날짜별 그룹화
+          var groups = {};
+          var datesOrder = [];
+          list.forEach(function (r) {
+            if (!groups[r.date]) {
+              groups[r.date] = [];
+              datesOrder.push(r.date);
+            }
+            groups[r.date].push(r);
+          });
+          datesOrder.sort(function (a, b) { return b.localeCompare(a); });
+
+          datesOrder.forEach(function (d) {
+            var dayRecs = groups[d];
+            var daySum = dayRecs.reduce(function (a, r) { return a + r.durationSeconds; }, 0);
+
+            var hdr = document.createElement('div');
+            hdr.className = 'date-group-header tabular';
+            hdr.innerHTML = '<span>' + d + '</span><span>' + dayRecs.length + '회 · ' + formatDurationKo(daySum) + '</span>';
+            el.recGroupedContainer.appendChild(hdr);
+
+            var ul = document.createElement('ul');
+            ul.className = 'records-list';
+            dayRecs.forEach(function (r) {
+              ul.appendChild(createRecordListItem(r, true));
+            });
+            el.recGroupedContainer.appendChild(ul);
+          });
+        }
+
+        // PAGE 4: 목표 · D-Day 렌더링
+        function renderGoalsPage() {
+          var weekRecords = getRecordsByPeriod('week');
+          var secBySubId = {};
+          var weekTotalSec = 0;
+          weekRecords.forEach(function (r) {
+            secBySubId[r.subjectId] = (secBySubId[r.subjectId] || 0) + r.durationSeconds;
+            weekTotalSec += r.durationSeconds;
+          });
+
+          // 시간 편중 진단
+          var weekBySubject = aggregateBySubject(weekRecords);
+          var imbalanceMsg = '';
+          if (weekTotalSec >= 1800 && state.subjects.length >= 2 && weekBySubject.length > 0) {
+            var sorted = weekBySubject.slice().sort(function (a, b) { return b.seconds - a.seconds; });
+            var topShare = Math.round((sorted[0].seconds / weekTotalSec) * 100);
+            if (topShare >= 60) {
+              imbalanceMsg = '시간 편중 알림: 이번 주 공부의 ' + topShare + '%가 ' + sorted[0].name + '에 몰려 있어요. 다른 과목도 함께 챙겨보세요.';
+            }
+          }
+          el.adviceBalanceNote.style.display = imbalanceMsg ? 'block' : 'none';
+          el.adviceBalanceNote.textContent = imbalanceMsg;
+
+          var subjectsWithGoal = state.subjects.filter(function (s) { return s.weeklyGoalMinutes > 0; });
+          el.adviceBanner.classList.remove('is-complete', 'is-imbalanced');
+
+          if (state.subjects.length === 0) {
+            el.adviceKicker.textContent = '시작 안내';
+            el.adviceText.textContent = '과목을 추가하고 첫 공부 시간을 측정해 보세요.';
+            el.adviceSub.textContent = '과목별 주간 목표 시간을 넣으면 부족한 과목을 계산해 알려드려요.';
+          } else if (subjectsWithGoal.length === 0) {
+            el.adviceKicker.textContent = '시간 배분 제안';
+            el.adviceText.textContent = '과목별 주간 목표 시간을 설정해 보세요.';
+            el.adviceSub.textContent = '목표 대비 부족한 과목이 있으면 이곳에서 바로 알려드려요.';
+          } else {
+            var jsDay = new Date().getDay();
+            var remainingWeekDays = jsDay === 0 ? 1 : 8 - jsDay;
+            var deficits = [];
+            subjectsWithGoal.forEach(function (s) {
+              var remain = s.weeklyGoalMinutes * 60 - (secBySubId[s.id] || 0);
+              if (remain > 0) deficits.push({ subject: s, remainSec: remain });
+            });
+
+            if (deficits.length === 0) {
+              el.adviceBanner.classList.add('is-complete');
+              el.adviceKicker.textContent = '주간 목표 달성';
+              el.adviceText.textContent = '이번 주 설정한 과목 목표를 모두 달성했어요!';
+              el.adviceSub.textContent = '계획한 시간 배분을 안정적으로 지키고 있습니다.';
+            } else {
+              deficits.sort(function (a, b) { return b.remainSec - a.remainSec; });
+              var top = deficits[0];
+              if (imbalanceMsg) el.adviceBanner.classList.add('is-imbalanced');
+              el.adviceKicker.textContent = '시간 배분 제안';
+              el.adviceText.textContent = '이번 주 ' + top.subject.name + '이 목표보다 ' + formatDurationKo(top.remainSec) + ' 부족해요.';
+              var subParts = ['이번 주 남은 ' + remainingWeekDays + '일 동안 하루 평균 ' + formatDurationKo(Math.ceil(top.remainSec / remainingWeekDays)) + '씩 추천해요.'];
+              if (deficits.length > 1) subParts.push('다음 부족 과목: ' + deficits[1].subject.name + ' (' + formatDurationKo(deficits[1].remainSec) + ')');
+              el.adviceSub.textContent = subParts.join(' · ');
+            }
+          }
+
+          // 목표 달성률 막대
+          el.goalProgressList.innerHTML = '';
+          if (state.subjects.length === 0) {
+            el.goalProgressList.innerHTML = '<li class="empty-state"><strong>등록된 과목이 없어요</strong>과목·설정 페이지에서 과목과 주간 목표를 추가해 보세요.</li>';
+          } else {
+            state.subjects.forEach(function (s) {
+              var doneSec = secBySubId[s.id] || 0;
+              var goalSec = s.weeklyGoalMinutes * 60;
+              var pct = goalSec > 0 ? Math.round((doneSec / goalSec) * 100) : 0;
+              var visualPct = Math.min(100, pct);
+
+              var li = document.createElement('li');
+              var valText = goalSec <= 0 ? formatDurationKo(doneSec) + ' · 목표 미설정' : formatDurationKo(doneSec) + ' / ' + formatDurationKo(goalSec) + ' · ' + (pct >= 100 ? '달성 완료 (' + pct + '%)' : pct + '%');
+              li.innerHTML =
+                '<div class="goal-row-head"><div class="goal-row-title"><span class="subject-dot" style="background:' + s.color + '"></span><span></span></div>' +
+                '<span class="goal-row-values tabular">' + valText + '</span></div>' +
+                '<div class="progress-track"><div class="progress-bar" style="width:' + visualPct + '%; background:' + s.color + '"></div></div>';
+              li.querySelector('.goal-row-title span:last-child').textContent = s.name;
+              el.goalProgressList.appendChild(li);
+            });
+          }
+
+          // 시험·수행평가 D-Day 목록
+          el.ddayCountMeta.textContent = state.examGoals.length + '개 일정';
+          el.ddayList.innerHTML = '';
+          if (state.examGoals.length === 0) {
+            el.ddayList.innerHTML = '<li class="empty-state"><strong>등록된 시험 일정이 없어요</strong>상단 "+ 시험·수행평가 추가" 버튼으로 목표일을 등록해 보세요.</li>';
+          } else {
+            var sortedExams = state.examGoals.slice().sort(function (a, b) { return a.date.localeCompare(b.date); });
+            sortedExams.forEach(function (g) {
+              var diff = diffDaysFromToday(g.date);
+              var dStr = diff > 0 ? 'D-' + diff : diff === 0 ? 'D-Day' : 'D+' + Math.abs(diff);
+              var li = document.createElement('li');
+              li.className = 'dday-item';
+
+              var left = document.createElement('div');
+              left.style.display = 'flex';
+              left.style.alignItems = 'center';
+              left.style.gap = '12px';
+              left.innerHTML = '<span class="dday-badge-text tabular">' + dStr + '</span><div><div style="font-weight:600;"></div><div class="section-meta tabular">' + g.date + '</div></div>';
+              left.querySelector('div > div:first-child').textContent = g.title;
+
+              var del = document.createElement('button');
+              del.type = 'button';
+              del.className = 'btn-icon-danger';
+              del.textContent = '삭제';
+              del.addEventListener('click', function () { deleteExamGoal(g.id); });
+
+              li.appendChild(left);
+              li.appendChild(del);
+              el.ddayList.appendChild(li);
+            });
+          }
+        }
+
+        // PAGE 5: 과목 · 설정 & 배경 음악 라이브러리 렌더링
+        function renderManagePage() {
+          el.manageLeaveGuardBtn.textContent = state.autoPauseOnLeave ? '켜짐 (자동 정지)' : '꺼짐';
+          el.noiseVolumeRange.value = String(Math.round(state.noiseVolume * 100));
+
+          el.colorPalette.innerHTML = '<span class="color-palette-label">색상</span>';
+          SUBJECT_COLORS.forEach(function (hex) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'color-swatch' + (uiState.selectedColor === hex ? ' is-active' : '');
+            btn.style.backgroundColor = hex;
+            btn.setAttribute('aria-label', '색상 ' + hex);
+            btn.addEventListener('click', function () {
+              uiState.selectedColor = hex;
+              renderManagePage();
+            });
+            el.colorPalette.appendChild(btn);
+          });
+
+          el.subjectCountMeta.textContent = state.subjects.length + '개 과목';
+          el.subjectManageList.innerHTML = '';
+          if (state.subjects.length === 0) {
+            el.subjectManageList.innerHTML = '<li class="empty-state"><strong>등록된 과목이 없어요</strong>위 입력창에서 공부할 과목을 추가해 주세요.</li>';
+          } else {
+            state.subjects.forEach(function (s) {
+              var li = document.createElement('li');
+              li.className = 'subject-manage-item';
+
+              var left = document.createElement('div');
+              left.className = 'subject-manage-left';
+              var dot = document.createElement('span');
+              dot.className = 'subject-dot';
+              dot.style.backgroundColor = s.color;
+              var nameSpan = document.createElement('span');
+              nameSpan.className = 'subject-manage-name';
+              nameSpan.textContent = s.name;
+              left.appendChild(dot);
+              left.appendChild(nameSpan);
+
+              var right = document.createElement('div');
+              right.className = 'subject-manage-right';
+
+              var goalWrap = document.createElement('label');
+              goalWrap.className = 'goal-input-wrap';
+              goalWrap.textContent = '목표';
+              var goalInput = document.createElement('input');
+              goalInput.type = 'number';
+              goalInput.min = '0';
+              goalInput.max = '168';
+              goalInput.step = '0.5';
+              goalInput.className = 'goal-input tabular';
+              goalInput.value = String(Number((s.weeklyGoalMinutes / 60).toFixed(1)));
+              goalInput.addEventListener('change', function () {
+                updateSubjectGoalHours(s.id, goalInput.value);
+                goalInput.value = String(Number((s.weeklyGoalMinutes / 60).toFixed(1)));
+                showToast(s.name + ' 주간 목표를 저장했어요.');
+              });
+              var unitSpan = document.createElement('span');
+              unitSpan.textContent = 'h';
+              goalWrap.appendChild(goalInput);
+              goalWrap.appendChild(unitSpan);
+
+              var editBtn = document.createElement('button');
+              editBtn.type = 'button';
+              editBtn.className = 'btn-icon-muted';
+              editBtn.textContent = '수정';
+              editBtn.addEventListener('click', function () { openEditSubjectModal(s.id); });
+
+              var delBtn = document.createElement('button');
+              delBtn.type = 'button';
+              delBtn.className = 'btn-icon-danger';
+              delBtn.textContent = '삭제';
+              delBtn.addEventListener('click', function () { deleteSubject(s.id); });
+
+              right.appendChild(goalWrap);
+              right.appendChild(editBtn);
+              right.appendChild(delBtn);
+              li.appendChild(left);
+              li.appendChild(right);
+              el.subjectManageList.appendChild(li);
+            });
+          }
+
+          renderMusicSection();
+        }
+
+        // =========================================================================
+        // 10. 배경 음악 추천 & Web Audio 내장 사운드
+        // =========================================================================
+        function stopAmbientSound() {
+          try {
+            if (ambientAudio.source) {
+              ambientAudio.source.stop();
+              ambientAudio.source.disconnect();
+              ambientAudio.source = null;
+            }
+            if (ambientAudio.gain) {
+              ambientAudio.gain.disconnect();
+              ambientAudio.gain = null;
+            }
+          } catch (e) {
+            ambientAudio.source = null;
+          }
+          ambientAudio.activeType = null;
+        }
+
+        function toggleAmbientSound(noiseType, label) {
+          if (ambientAudio.activeType === noiseType) {
+            stopAmbientSound();
+            renderMusicPanelsRefresh();
+            showToast('배경 사운드를 정지했어요.');
+            return;
+          }
+
+          stopAmbientSound();
+          try {
+            var AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) {
+              showToast('이 브라우저에서는 내장 사운드 재생을 지원하지 않아요.');
+              return;
+            }
+            if (!ambientAudio.ctx) ambientAudio.ctx = new AudioCtx();
+            var ctx = ambientAudio.ctx;
+            if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
+
+            var bufferSize = ctx.sampleRate * 2;
+            var buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            var data = buffer.getChannelData(0);
+            var lastOut = 0;
+            for (var i = 0; i < bufferSize; i++) {
+              var white = Math.random() * 2 - 1;
+              if (noiseType === 'brown') {
+                lastOut = (lastOut + 0.02 * white) / 1.02;
+                data[i] = lastOut * 3.2;
+              } else {
+                lastOut = lastOut * 0.92 + white * 0.08;
+                data[i] = lastOut * 1.8;
+              }
+            }
+
+            var source = ctx.createBufferSource();
+            source.buffer = buffer;
+            source.loop = true;
+
+            var filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = noiseType === 'brown' ? 420 : noiseType === 'pink' ? 950 : 1400;
+
+            var gain = ctx.createGain();
+            gain.gain.value = state.noiseVolume;
+
+            source.connect(filter);
+            filter.connect(gain);
+            gain.connect(ctx.destination);
+            source.start(0);
+
+            ambientAudio.source = source;
+            ambientAudio.gain = gain;
+            ambientAudio.activeType = noiseType;
+
+            renderMusicPanelsRefresh();
+            showToast(label + ' 재생을 시작했어요.');
+          } catch (e) {
+            stopAmbientSound();
+            showToast('오디오 재생을 시작하지 못했어요.');
+          }
+        }
+
+        function renderMusicPanelsRefresh() {
+          renderMusicSection();
+          renderMusicPanelInto(uiState.selectedMusicScore, el.homeMusicBody);
+          if (el.stopStepMusic.style.display !== 'none') {
+            renderMusicPanelInto(uiState.selectedMusicScore, el.stopMusicBody);
+          }
+        }
+
+        function renderMusicPanelInto(score, container) {
+          var rec = FOCUS_MUSIC_MAP[score] || FOCUS_MUSIC_MAP[3];
+          container.innerHTML = '';
+
+          var genreBox = document.createElement('div');
+          genreBox.className = 'music-genre-box';
+          genreBox.innerHTML =
+            '<div class="music-genre-kicker">' + rec.stateLabel + ' 맞춤 추천</div>' +
+            '<h4 class="music-genre-title">' + rec.genre + '</h4>' +
+            '<p class="music-genre-reason">' + rec.reason + '</p>';
+          container.appendChild(genreBox);
+
+          var audioRow = document.createElement('div');
+          audioRow.className = 'music-audio-row';
+          var isPlaying = ambientAudio.activeType === rec.noiseType;
+          audioRow.innerHTML =
+            '<div><div class="music-audio-meta">' + rec.noiseLabel + '</div><div class="music-audio-sub">외부 앱 이동 없이 바로 재생</div></div>';
+
+          var audioBtn = document.createElement('button');
+          audioBtn.type = 'button';
+          audioBtn.className = 'music-audio-btn' + (isPlaying ? ' is-playing' : '');
+          audioBtn.textContent = isPlaying ? '정지' : '바로 듣기';
+          audioBtn.addEventListener('click', function () { toggleAmbientSound(rec.noiseType, rec.noiseLabel); });
+          audioRow.appendChild(audioBtn);
+          container.appendChild(audioRow);
+
+          var list = document.createElement('ul');
+          list.className = 'music-playlist-list';
+          rec.playlists.forEach(function (pl) {
+            var li = document.createElement('li');
+            li.className = 'music-playlist-item';
+            var link = document.createElement('a');
+            link.className = 'music-playlist-link';
+            link.href = pl.url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.innerHTML =
+              '<div class="music-playlist-info"><div class="music-playlist-title">' + pl.title + '</div>' +
+              '<div class="music-playlist-platform">' + pl.platform + '</div></div>' +
+              '<span class="music-playlist-arrow">열기 ↗</span>';
+            li.appendChild(link);
+            list.appendChild(li);
+          });
+          container.appendChild(list);
+        }
+
+        function renderMusicSection() {
+          var latestRated = null;
+          for (var i = 0; i < state.records.length; i++) {
+            if (state.records[i].focus >= 1 && state.records[i].focus <= 5) {
+              latestRated = state.records[i];
+              break;
+            }
+          }
+          var tabs = el.musicScoreTabs.querySelectorAll('.music-score-tab');
+          for (var j = 0; j < tabs.length; j++) {
+            var s = Number(tabs[j].getAttribute('data-music-score'));
+            var active = s === uiState.selectedMusicScore;
+            tabs[j].classList.toggle('is-active', active);
+            tabs[j].setAttribute('aria-selected', active ? 'true' : 'false');
+          }
+          el.musicScopeMeta.textContent =
+            latestRated && latestRated.focus === uiState.selectedMusicScore
+              ? '최근 측정(' + latestRated.subjectName + ' ' + latestRated.focus + '점) 기준'
+              : uiState.selectedMusicScore + '점 선택 보기';
+
+          renderMusicPanelInto(uiState.selectedMusicScore, el.musicDashboardBody);
+        }
+
+        function renderAll() {
+          applyTheme();
+          renderTimerSection();
+          renderHomeSummary();
+          renderAnalyticsPage();
+          renderRecordsPage();
+          renderGoalsPage();
+          renderManagePage();
+        }
+
+        // =========================================================================
+        // 11. 이벤트 바인딩 및 앱 시작
+        // =========================================================================
+        window.addEventListener('hashchange', function () {
+          navigateToPage(parsePageFromHash());
+        });
+
+        el.themeToggleBtn.addEventListener('click', toggleTheme);
+        el.manageThemeBtn.addEventListener('click', toggleTheme);
+        el.leaveGuardToggleBtn.addEventListener('click', toggleAutoPauseOnLeave);
+        el.manageLeaveGuardBtn.addEventListener('click', toggleAutoPauseOnLeave);
+
+        el.primaryTimerBtn.addEventListener('click', function () {
+          if (state.activeSession) openStopModal();
+          else startTimer();
+        });
+        el.pauseResumeBtn.addEventListener('click', togglePauseResume);
+        el.miniTimerResumeBtn.addEventListener('click', togglePauseResume);
+        el.miniTimerStopBtn.addEventListener('click', openStopModal);
+
+        // 집중 타이머 가이드(자유 / 25분 / 50분) 선택
+        el.timerSection.addEventListener('click', function (e) {
+          var chip = e.target.closest('.mode-chip');
+          if (!chip) return;
+          uiState.guideMinutes = Number(chip.getAttribute('data-guide-min')) || 0;
+          uiState.guideNotifiedForSession = false;
+          var chips = el.timerSection.querySelectorAll('.mode-chip');
+          for (var i = 0; i < chips.length; i++) {
+            chips[i].classList.toggle('is-active', chips[i] === chip);
+          }
+          renderTimerSection();
+        });
+
+        // 분석 기간 탭 전환
+        el.analyticsPeriodTabs.addEventListener('click', function (e) {
+          var btn = e.target.closest('.segmented-tab');
+          if (!btn) return;
+          uiState.analyticsPeriod = btn.getAttribute('data-period');
+          renderAnalyticsPage();
+        });
+
+        // 기록 필터링
+        el.recSubjectFilter.addEventListener('change', renderRecordsPage);
+        el.recPeriodFilter.addEventListener('change', renderRecordsPage);
+        el.recFocusFilter.addEventListener('change', renderRecordsPage);
+        el.recSearchInput.addEventListener('input', renderRecordsPage);
+        el.recResetFilterBtn.addEventListener('click', function () {
+          el.recSubjectFilter.value = 'all';
+          el.recPeriodFilter.value = 'all';
+          el.recFocusFilter.value = 'all';
+          el.recSearchInput.value = '';
+          renderRecordsPage();
+        });
+
+        el.homeQuickAddBtn.addEventListener('click', function () { openManualRecordModal(null); });
+        el.recManualAddBtn.addEventListener('click', function () { openManualRecordModal(null); });
+        el.exportCsvBtn.addEventListener('click', exportRecordsCsv);
+
+        // 정지 모달
+        el.focusScoreGrid.addEventListener('click', function (e) {
+          var btn = e.target.closest('.focus-score-btn');
+          if (!btn) return;
+          finalizeAndSaveSession(Number(btn.getAttribute('data-score')));
+        });
+        el.saveWithoutFocusBtn.addEventListener('click', function () { finalizeAndSaveSession(null); });
+        el.stopMusicCloseBtn.addEventListener('click', closeStopModal);
+        el.resumeSessionBtn.addEventListener('click', closeStopModal);
+        el.discardSessionBtn.addEventListener('click', discardActiveSession);
+        el.stopModalBackdrop.addEventListener('click', function (e) {
+          if (e.target === el.stopModalBackdrop) closeStopModal();
+        });
+
+        // 직접 추가/수정 모달
+        el.manualCancelBtn.addEventListener('click', function () { el.manualModalBackdrop.classList.remove('is-open'); });
+        el.manualModalBackdrop.addEventListener('click', function (e) {
+          if (e.target === el.manualModalBackdrop) el.manualModalBackdrop.classList.remove('is-open');
+        });
+        el.manualFocusGrid.addEventListener('click', function (e) {
+          var btn = e.target.closest('.focus-score-btn');
+          if (!btn) return;
+          uiState.manualFocus = Number(btn.getAttribute('data-score'));
+          updateManualFocusButtons();
+        });
+        el.manualRecordForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          saveManualOrEditedRecord();
+        });
+
+        // 시험 D-Day 모달
+        el.openExamModalBtn.addEventListener('click', openExamModal);
+        el.examCancelBtn.addEventListener('click', function () { el.examModalBackdrop.classList.remove('is-open'); });
+        el.examModalBackdrop.addEventListener('click', function (e) {
+          if (e.target === el.examModalBackdrop) el.examModalBackdrop.classList.remove('is-open');
+        });
+        el.examGoalForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var title = el.examTitleInput.value.trim();
+          var dateVal = el.examDateInput.value;
+          if (!title || !dateVal) return;
+          state.examGoals.push({ id: generateId('exam'), title: title.slice(0, 20), date: dateVal });
+          saveState();
+          el.examModalBackdrop.classList.remove('is-open');
+          renderAll();
+          showToast('"' + title + '" 일정을 추가했어요.');
+        });
+
+        // 과목 추가 / 수정 모달
+        el.addSubjectForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          addSubject(el.newSubjectName.value, uiState.selectedColor);
+        });
+        el.editSubjectCancelBtn.addEventListener('click', function () { el.editSubjectBackdrop.classList.remove('is-open'); });
+        el.editSubjectBackdrop.addEventListener('click', function (e) {
+          if (e.target === el.editSubjectBackdrop) el.editSubjectBackdrop.classList.remove('is-open');
+        });
+        el.editSubjectForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          saveEditedSubject(el.editSubjectNameInput.value, uiState.editingColor);
+        });
+
+        // 설정 & 백업 & 초기화
+        el.noiseVolumeRange.addEventListener('input', function () {
+          state.noiseVolume = Math.max(0.02, Math.min(0.4, Number(el.noiseVolumeRange.value) / 100));
+          if (ambientAudio.gain) ambientAudio.gain.gain.value = state.noiseVolume;
+          saveState();
+        });
+
+        el.musicScoreTabs.addEventListener('click', function (e) {
+          var btn = e.target.closest('.music-score-tab');
+          if (!btn) return;
+          uiState.selectedMusicScore = Number(btn.getAttribute('data-music-score'));
+          renderMusicPanelsRefresh();
+        });
+
+        el.topbarDownloadHtmlBtn.addEventListener('click', downloadStandaloneHtml);
+        el.downloadHtmlBtn.addEventListener('click', downloadStandaloneHtml);
+        el.exportJsonBtn.addEventListener('click', exportBackupJson);
+        el.importJsonBtn.addEventListener('click', function () {
+          el.importJsonInput.value = '';
+          el.importJsonInput.click();
+        });
+        el.importJsonInput.addEventListener('change', function () {
+          if (el.importJsonInput.files && el.importJsonInput.files[0]) {
+            handleImportJsonFile(el.importJsonInput.files[0]);
+          }
+        });
+
+        el.resetAllRecordsBtn.addEventListener('click', function () {
+          openConfirmModal(
+            '모든 공부 기록을 초기화할까요?',
+            '과목 설정은 유지되고 저장된 공부 기록만 모두 삭제됩니다.',
+            function () {
+              state.records = [];
+              saveState();
+              renderAll();
+              showToast('모든 공부 기록을 초기화했어요.');
+            }
+          );
+        });
+
+        // 삭제 확인 모달
+        el.confirmCancelBtn.addEventListener('click', closeConfirmModal);
+        el.confirmOkBtn.addEventListener('click', function () {
+          var fn = uiState.pendingConfirmAction;
+          closeConfirmModal();
+          if (typeof fn === 'function') fn();
+        });
+        el.confirmModalBackdrop.addEventListener('click', function (e) {
+          if (e.target === el.confirmModalBackdrop) closeConfirmModal();
+        });
+
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') closeAllModals();
+        });
+
+        // 탭 전환, 다른 앱 실행, 창 이탈, 페이지 종료 시 자동 정지 및 복귀 안내
+        document.addEventListener('visibilitychange', function () {
+          if (document.hidden) {
+            pauseSessionForLeave();
+          } else {
+            notifyIfReturnedFromLeavePause();
+            if (state.activeSession && !state.activeSession.isPaused) {
+              updateTimerDisplay();
+            }
+          }
+        });
+
+        window.addEventListener('blur', function () {
+          pauseSessionForLeave();
+        });
+
+        window.addEventListener('focus', function () {
+          notifyIfReturnedFromLeavePause();
+        });
+
+        window.addEventListener('pagehide', function () {
+          pauseSessionForLeave();
+        });
+
+        window.addEventListener('beforeunload', function () {
+          pauseSessionForLeave();
+        });
+
+        // 앱 시작
+        loadState();
+        for (var k = 0; k < state.records.length; k++) {
+          if (state.records[k].focus >= 1 && state.records[k].focus <= 5) {
+            uiState.selectedMusicScore = state.records[k].focus;
+            break;
+          }
+        }
+        ensureTimerLoop();
+        renderAll();
+        navigateToPage(parsePageFromHash());
+      })();
+    </script></body>
+</html>
